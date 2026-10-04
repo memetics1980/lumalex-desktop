@@ -4,6 +4,8 @@
 
 This guide covers the portable 64-bit Windows 10/11 edition. Bring your own legitimately obtained MDX/MDD dictionaries. AI is optional assistance, not a replacement for offline dictionaries. Chinese UI labels are included below to help locate controls; this documentation does not change the application's interface language.
 
+Click screenshots to view the full-resolution originals. The displayed dictionaries and reading materials are not bundled with the application.
+
 ## 1. First launch and dictionary import
 
 1. Extract the complete portable package and run `LumaLex.exe`. Keep its DLLs and `data` folder beside it.
@@ -27,7 +29,15 @@ Do not move, rename or delete the source files after import. Initial import or s
 
 Enter a word on the lookup page (查词) and submit it. If an exact match is missing, the app may try inflections or nearby spellings and indicate which word it actually displays.
 
+[![Main lookup page](images/main-lookup.png)](images/main-lookup.png)
+
+A styled dictionary entry and the desktop dictionary sidebar.
+
 On the dictionary page, set display names, enabled status, order and groups. Choose all dictionaries (全部词典), ungrouped dictionaries (未分组), or a specific group for lookup. A specific group restricts both lookup and previous/next switching; it does not automatically continue into another group.
+
+[![Dictionary group management](images/dictionary-groups.png)](images/dictionary-groups.png)
+
+Create groups, enable dictionaries, adjust their order or import another folder.
 
 Ways to switch:
 
@@ -72,6 +82,10 @@ If the shortcut is occupied, turn lookup off, choose another offered shortcut, a
 - **Persistent display (持续显示)**: toggle the display-mode button to disable automatic closing. Close manually or switch back to automatic mode.
 - **Waiting for AI**: an active AI request pauses automatic closing. You can still close the window manually.
 
+[![Browser selection and lookup popup](images/screen-lookup-browser.png)](images/screen-lookup-browser.png)
+
+The popup combines scope selection, dictionary arrows, favorites, display mode and optional AI output.
+
 ### Application compatibility
 
 | Reading environment | Capture method | Contextual AI |
@@ -91,6 +105,10 @@ Traditional dictionaries list multiple senses for the reader to distinguish. AI 
 
 Results include the lemma, part of speech, English and Chinese meanings, source evidence, a confidence level and an ambiguity note. Confidence is the model's own judgment, not a calibrated accuracy score. Check short contexts and complex sentences especially carefully.
 
+[![AI explanation with contextual evidence in Word](images/ai-context-word.png)](images/ai-context-word.png)
+
+An example analysis of “human touch” in Word. This is one model response, not a guaranteed interpretation for every context or application.
+
 ### Configure the service
 
 Open Settings → Contextual AI (设置 → AI 语境释义):
@@ -100,6 +118,10 @@ Open Settings → Contextual AI (设置 → AI 语境释义):
 3. Enter the provider's **model ID**, not its marketing name.
 4. Enter your **API key** and click Save configuration (保存配置). It is stored in the current Windows user's secure credentials.
 5. Click Test connection (测试连接) to verify that the service returns the required structured explanation.
+
+[![AI, screen lookup and reading settings](images/settings.png)](images/settings.png)
+
+The screenshot shows example service, model and shortcut choices, not required defaults or recommendations. The API key is not displayed.
 
 Remote services require HTTPS. A local service may use an HTTP localhost or 127.0.0.1 address, but must still meet the application's endpoint, model and key requirements.
 
@@ -117,6 +139,12 @@ Select a word in an application that provides context, press the lookup shortcut
 ## 5. Favorites, reading settings and the tray
 
 The main window and popup share favorites. Open the vocabulary page (词汇本) to view saved words and related learning records.
+
+The lookup home page also lists recent searches; click an item to look it up again.
+
+[![Recent searches on the lookup home page](images/search-history.png)](images/search-history.png)
+
+Search history provides quick access to previously looked-up words.
 
 Use `Aa` on the lookup page or Settings → Reading (设置 → 阅读) to adjust text scale across dictionaries. A scale change reflows the entry.
 

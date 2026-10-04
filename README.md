@@ -1,3 +1,5 @@
+<img src="app/assets/branding/lumalex-icon-ui.png" alt="LumaLex app icon" width="96" height="96">
+
 # LumaLex Windows
 
 [简体中文](README.md) | [English](README_EN.md)
@@ -8,7 +10,9 @@ LumaLex 是面向 **Windows 10 / 11（64 位）** 的便携式 MDX/MDD 词典阅
 
 LumaLex 不内置或分发商业词典，也不是必须联网才能使用的在线词典：导入自己的词典后即可离线查词；AI 语境释义是需要单独配置、主动触发的可选功能。
 
-[完整使用说明](docs/USER_GUIDE.zh-CN.md) · [English user guide](docs/USER_GUIDE.en.md) · [Windows 构建指南](app/windows/README.md)
+[下载 Windows 便携版](https://github.com/memetics1980/lumalex-windows/releases/latest) · [完整使用说明](docs/USER_GUIDE.zh-CN.md) · [English user guide](docs/USER_GUIDE.en.md) · [Windows 构建指南](app/windows/README.md)
+
+点击截图可查看原尺寸图片。截图中的词典和阅读材料仅用于演示，不随程序分发；AI 截图是一次实际输出示例，不代表固定或保证正确的答案。
 
 ## 特色功能
 
@@ -16,7 +20,15 @@ LumaLex 不内置或分发商业词典，也不是必须联网才能使用的在
 
 支持 MDX 词条和 MDD 图片、字体、音频等资源，尽量保留词典原有的排版与交互。导入词典文件夹后，词典原文件留在原位置，无需复制到应用目录。
 
+[![主窗口词条显示与左侧词典列表](docs/images/main-lookup.png)](docs/images/main-lookup.png)
+
+主窗口查词：保留词典排版与发音控件，并通过左侧列表快速切换词典。
+
 可以给词典分组，限定只在某个分组内查找和切换，也可以使用“全部词典”或“未分组”范围。下拉列表、左右箭头、快捷键和宽窗口左侧词典列表，让切换不再只有反复打开菜单一种方式。
+
+[![词典分组、启用状态与顺序管理](docs/images/dictionary-groups.png)](docs/images/dictionary-groups.png)
+
+词典管理：分组、启用状态、排列顺序及词典导入。
 
 ### 不离开阅读页面的取词浮窗
 
@@ -29,6 +41,10 @@ LumaLex 不内置或分发商业词典，也不是必须联网才能使用的在
 - 顶部空白区域拖动，支持鼠标或触摸，避免遮挡原文。
 - “自动关闭”与“持续显示”：鼠标停在浮窗内不关闭，移出后 5 秒自动消失；持续显示模式不自动关闭。AI 请求进行中也不会因自动关闭而中断。
 
+[![浏览器阅读时的取词浮窗与 AI 语境释义](docs/images/screen-lookup-browser.png)](docs/images/screen-lookup-browser.png)
+
+浏览器阅读示例：选中 moves，在同一浮窗中对照 AI 的本句释义与本地词典。
+
 ### AI 语境释义：找到“本句中的意思”
 
 同一个词往往有多个义项。LumaLex 的 AI 功能把选中词和附近语境交给用户配置的模型，帮助判断当前句子中的词性与含义，而不是简单罗列所有释义。
@@ -36,6 +52,10 @@ LumaLex 不内置或分发商业词典，也不是必须联网才能使用的在
 例如，`voice` 在 “a beautiful voice” 与 “voice their concerns” 中的用法不同。这里仅用来说明语境分析的目的，不代表固定的 AI 输出。
 
 分析结果包括词形、词性、中英文释义、语境依据，以及置信度和歧义提示。可以同时对照本地词典，核实 AI 的判断。
+
+[![Word 文档中 touch 的 AI 本句义项分析](docs/images/ai-context-word.png)](docs/images/ai-context-word.png)
+
+Word 文档示例：AI 将 human touch 解释为“人情味、人性化的接触”。提供可用文本接口的文档应用也能取得语境，具体支持情况仍取决于应用。
 
 **使用边界**：只有取到了可用的上下文才支持 AI 语境释义。部分 PDF 阅读器只能复制选中词，这时仍能查本地词典，但没有语境 AI。它不是 OCR，也不能保证读取所有应用。AI 结果可能出错，不应代替词典核查。
 
@@ -78,7 +98,7 @@ flutter pub get
 .\windows\build_portable.ps1
 ```
 
-脚本运行 Flutter 测试并生成便携 ZIP 与 SHA-256 校验文件，输出到 `app/windows/releases`。这些构建产物不随源码提交；仓库存在并不代表已提供可下载的 Release。
+脚本运行 Flutter 测试并生成便携 ZIP 与 SHA-256 校验文件，输出到 `app/windows/releases`。这些构建产物不作为源码提交。已发布的便携包请从 [Releases](https://github.com/memetics1980/lumalex-windows/releases/latest) 下载，不要把 GitHub 的源码 ZIP 当作可运行程序。
 
 开发运行与测试：
 

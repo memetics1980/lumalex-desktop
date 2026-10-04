@@ -1,3 +1,5 @@
+<img src="app/assets/branding/lumalex-icon-ui.png" alt="LumaLex app icon" width="96" height="96">
+
 # LumaLex Windows
 
 [简体中文](README.md) | [English](README_EN.md)
@@ -8,7 +10,9 @@ LumaLex is a portable MDX/MDD dictionary reader for **64-bit Windows 10 and 11**
 
 LumaLex does not bundle or distribute commercial dictionaries. Once you import your own dictionaries, ordinary lookup works offline. Contextual AI explanations are optional, require separate configuration, and run only on request.
 
-[User guide](docs/USER_GUIDE.en.md) · [中文使用说明](docs/USER_GUIDE.zh-CN.md) · [Windows build guide](app/windows/README.md)
+[Download Windows portable edition](https://github.com/memetics1980/lumalex-windows/releases/latest) · [User guide](docs/USER_GUIDE.en.md) · [中文使用说明](docs/USER_GUIDE.zh-CN.md) · [Windows build guide](app/windows/README.md)
+
+Click a screenshot to view the full-resolution original. Dictionaries and reading materials shown are examples and are not bundled with the app; AI output is an example, not a guaranteed answer.
 
 ## Highlights
 
@@ -16,7 +20,15 @@ LumaLex does not bundle or distribute commercial dictionaries. Once you import y
 
 Read MDX entries with MDD images, fonts and audio while preserving dictionary-authored formatting and interaction where compatible. Imported dictionary files stay in their original folders rather than being copied into the application directory.
 
+[![Main-window dictionary lookup and desktop sidebar](docs/images/main-lookup.png)](docs/images/main-lookup.png)
+
+Main-window lookup: dictionary-authored formatting, pronunciation controls and a desktop dictionary sidebar.
+
 Organize dictionaries into groups and restrict lookup and switching to one group, or choose all dictionaries or ungrouped dictionaries. Use the dropdown, previous/next buttons, keyboard shortcuts or the left-side list in wide windows to change dictionaries.
+
+[![Dictionary groups and enabled dictionaries](docs/images/dictionary-groups.png)](docs/images/dictionary-groups.png)
+
+Dictionary management: groups, enabled status, ordering and folder import.
 
 ### A lookup popup that keeps you in your reading
 
@@ -29,6 +41,10 @@ Select a word or phrase in another application and press the lookup shortcut to 
 - Mouse or touch dragging from the empty top area so the popup need not cover the source text.
 - Automatic closing or persistent display: it stays open while the pointer is inside and closes five seconds after it leaves. Persistent mode disables automatic closing, and an active AI request also pauses it.
 
+[![Selected-word popup with contextual AI while reading in a browser](docs/images/screen-lookup-browser.png)](docs/images/screen-lookup-browser.png)
+
+Browser reading example: select “moves” and compare the contextual AI explanation with the local dictionary in the same popup.
+
 ### Contextual AI: the meaning used in this sentence
 
 A word can have several meanings. LumaLex sends the selected word and nearby context to a model configured by the user, helping identify the part of speech and meaning used in the current sentence instead of listing every possible definition.
@@ -36,6 +52,10 @@ A word can have several meanings. LumaLex sends the selected word and nearby con
 For example, `voice` behaves differently in “a beautiful voice” and “voice their concerns.” This illustrates the purpose of contextual analysis, not a fixed AI response.
 
 Results include the lemma, part of speech, English and Chinese meanings, contextual evidence, a confidence level and an ambiguity note. Keep the local dictionary available to check the model's interpretation.
+
+[![Contextual AI analysis of touch in a Word document](docs/images/ai-context-word.png)](docs/images/ai-context-word.png)
+
+Word document example: AI interprets “human touch” as a personal or human quality. Supported document applications can also provide context; availability depends on their text interfaces.
 
 **Limitations**: contextual AI requires usable captured context. Some PDF readers only allow copying the selected word; offline lookup still works in that mode, but contextual AI is unavailable. Screen lookup is not OCR and cannot read every application. AI can make mistakes and should not replace dictionary verification.
 
@@ -78,7 +98,7 @@ flutter pub get
 .\windows\build_portable.ps1
 ```
 
-The script runs the Flutter tests and creates a portable ZIP plus a SHA-256 checksum in `app/windows/releases`. Generated packages are not committed; the existence of this repository does not mean a downloadable Release is available.
+The script runs the Flutter tests and creates a portable ZIP plus a SHA-256 checksum in `app/windows/releases`. Generated packages are not committed as source files. Download published portable packages from [Releases](https://github.com/memetics1980/lumalex-windows/releases/latest), not GitHub's source-code ZIP.
 
 For development and tests:
 

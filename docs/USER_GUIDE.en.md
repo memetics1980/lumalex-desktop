@@ -63,14 +63,14 @@ If the shortcut is occupied, turn lookup off, choose another offered shortcut, a
 
 ### Popup controls
 
-- **Switch dictionaries:** use `[◀] [Current dictionary ▾] [▶]`. Clicking the name opens a scrollable grouped menu for choosing the scope and dictionary. Arrows stay within that scope.
-- **Favorite:** click the star to save or unsave the word. The main vocabulary page shares the same records.
-- **Pronunciation:** click a speaker in the entry to play the dictionary's audio.
-- **Main window (主窗口):** continue the current word lookup in the full interface.
-- **Move:** drag the empty top area with a mouse or touch. Buttons and entry text are not drag surfaces.
-- **Automatic closing (自动关闭):** the popup stays open while the pointer is inside and disappears five seconds after it leaves. Return the pointer to continue reading.
-- **Persistent display (持续显示):** toggle the display-mode button to disable automatic closing. Close manually or switch back to automatic mode.
-- **Waiting for AI:** an active AI request pauses automatic closing. You can still close the window manually.
+- **Switch dictionaries**: use `[◀] [Current dictionary ▾] [▶]`. Clicking the name opens a scrollable grouped menu for choosing the scope and dictionary. Arrows stay within that scope.
+- **Favorite**: click the star to save or unsave the word. The main vocabulary page shares the same records.
+- **Pronunciation**: click a speaker in the entry to play the dictionary's audio.
+- **Main window (主窗口)**: continue the current word lookup in the full interface.
+- **Move**: drag the empty top area with a mouse or touch. Buttons and entry text are not drag surfaces.
+- **Automatic closing (自动关闭)**: the popup stays open while the pointer is inside and disappears five seconds after it leaves. Return the pointer to continue reading.
+- **Persistent display (持续显示)**: toggle the display-mode button to disable automatic closing. Close manually or switch back to automatic mode.
+- **Waiting for AI**: an active AI request pauses automatic closing. You can still close the window manually.
 
 ### Application compatibility
 
@@ -135,13 +135,13 @@ The portable package requires no installation, but preferences and learning reco
 
 ## 7. Troubleshooting
 
-- **Blank entry:** check WebView2 Runtime, unchanged dictionary paths, and complete MDX/MDD and accompanying resources.
-- **Word not found:** inspect the captured text, lookup scope, and whether the dictionary is enabled and accessible. Try typing the word manually.
-- **Screen lookup cannot be enabled:** choose another offered shortcut and confirm that the app and tray are running normally.
-- **PDF capture fails:** try copying manually in the reader first. Scans or documents that block copying may not support current text capture; use manual lookup.
-- **No AI button:** confirm that the toggle and configuration are saved. Selected text without context in copy mode cannot offer contextual AI.
-- **AI timeout or errors:** check the network, API address, model ID, key and service allowance. Some compatible endpoints or models do not return the expected format.
-- **No pronunciation:** check the matching MDD resources, system volume and output device. Not every dictionary includes recorded audio.
-- **Reporting a problem:** save a diagnostic report from Data and diagnostics. Review it for private paths or details before sharing; do not include API keys or dictionaries you cannot redistribute.
+- **Blank entry**: check WebView2 Runtime, unchanged dictionary paths, and complete MDX/MDD and accompanying resources.
+- **Word not found**: inspect the captured text, lookup scope, and whether the dictionary is enabled and accessible. Try typing the word manually.
+- **Screen lookup cannot be enabled**: choose another offered shortcut and confirm that the app and tray are running normally.
+- **PDF capture fails**: try copying manually in the reader first. Scans or documents that block copying may not support current text capture; use manual lookup.
+- **No AI button**: confirm that the toggle and configuration are saved. Selected text without context in copy mode cannot offer contextual AI.
+- **AI timeout or errors**: check the network, API address, model ID, key and service allowance. Some compatible endpoints or models do not return the expected format.
+- **No pronunciation**: check the matching MDD resources, system volume and output device. Not every dictionary includes recorded audio.
+- **Reporting a problem**: save a diagnostic report from Data and diagnostics. Review it for private paths or details before sharing; do not include API keys or dictionaries you cannot redistribute.
 
 [Project overview](../README_EN.md) · [简体中文](USER_GUIDE.zh-CN.md)

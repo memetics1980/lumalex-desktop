@@ -37,7 +37,7 @@ For example, `voice` behaves differently in “a beautiful voice” and “voice
 
 Results include the lemma, part of speech, English and Chinese meanings, contextual evidence, a confidence level and an ambiguity note. Keep the local dictionary available to check the model's interpretation.
 
-**Limitations:** contextual AI requires usable captured context. Some PDF readers only allow copying the selected word; offline lookup still works in that mode, but contextual AI is unavailable. Screen lookup is not OCR and cannot read every application. AI can make mistakes and should not replace dictionary verification.
+**Limitations**: contextual AI requires usable captured context. Some PDF readers only allow copying the selected word; offline lookup still works in that mode, but contextual AI is unavailable. Screen lookup is not OCR and cannot read every application. AI can make mistakes and should not replace dictionary verification.
 
 ### Designed for Windows reading
 

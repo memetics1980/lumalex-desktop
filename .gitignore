@@ -1,6 +1,5 @@
 # Local toolchains, dependencies and generated build output.
 /.toolchains/
-/app/android/theme-overrides/
 **/target/
 **/build/
 **/.dart_tool/

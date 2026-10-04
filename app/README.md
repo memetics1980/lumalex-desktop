@@ -8,6 +8,12 @@ This directory contains the Flutter application used by the Windows edition
 of LumaLex. This repository supports Windows releases only; other client
 editions are maintained separately.
 
+The application host project is Windows-only: `android/`, `ios/` and `macos/`
+are intentionally not included. Cross-platform packages and the shared Rust
+bridge can still contain other platform implementations; these are dependency
+internals, not additional supported application editions. Only the Windows
+WebView plugin has a local override in this repository.
+
 Use the complete repository, not this directory alone. The application depends
 on the Rust crates in `../crates`, the parser in `../vendor`, and the local
 plugin overrides referenced by `pubspec.yaml`.

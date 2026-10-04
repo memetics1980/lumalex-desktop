@@ -3,6 +3,11 @@
 This guide covers the Windows edition maintained in this repository. Other
 client editions have separate repositories and release procedures.
 
+The app host contains only `windows/`. Do not regenerate Android, iOS or macOS
+host projects here. Shared dependency packages may retain their upstream
+platform implementations and metadata. The former iOS WebView override has
+been removed; keep the Windows WebView override and its local patches.
+
 ## Ownership boundaries
 
 - `lib/`: lookup, article rendering, dictionary groups, history, favorites,

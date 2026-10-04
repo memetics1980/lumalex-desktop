@@ -25,11 +25,9 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
 
-# Keep platform WebView fixes inside this project. See each vendored plugin's
+# Keep Windows WebView fixes inside this project. See the vendored plugin's
 # LOCAL_PATCH.md for the small native changes applied on top of upstream.
 dependency_overrides:
-  flutter_inappwebview_ios:
-    path: ios/Plugins/flutter_inappwebview_ios
   flutter_inappwebview_windows:
     path: windows/Plugins/flutter_inappwebview_windows
 

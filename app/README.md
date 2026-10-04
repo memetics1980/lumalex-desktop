@@ -1,67 +1,46 @@
-# LumaLex
+# LumaLex Windows application
 
-LumaLex is a lightweight, local-first dictionary reader for MDX and MDD dictionaries.
+This directory contains the Flutter application used by the Windows edition
+of LumaLex. This repository supports Windows releases only; other client
+editions are maintained separately.
 
-## Release artifacts
+Use the complete repository, not this directory alone. The application depends
+on the Rust crates in `../crates`, the parser in `../vendor`, and the local
+plugin overrides referenced by `pubspec.yaml`.
 
-Flutter uses the top-level `build/` directory for generated intermediate
-files. It is not LumaLex's release delivery directory. Versioned application
-packages are kept with their platform projects:
+## Development
 
-- Android APK and AAB: `android/releases/`
-- iOS and iPadOS IPA: `ios/releases/`
+With the Windows prerequisites from the [repository README](../README.md)
+installed, run these commands from this directory:
 
-Use `android/build_release.sh` or `ios/build_release.sh` so the release package
-is built and copied to the correct platform directory automatically.
+```powershell
+flutter pub get
+flutter test
+flutter run -d windows
+```
 
-Android release builds require a private signing key. Copy
-`android/key.properties.example` to `android/key.properties` and fill in the
-keystore path and alias. The guarded script prompts for omitted passwords
-without saving them; CI can provide the documented `LUMALEX_KEYSTORE_*`
-environment variables. The release script refuses unsigned and Android Debug
-certificates.
+## Windows release artifacts
 
-`android/build_release.sh` builds the signed arm64 APK used for direct
-distribution. Pass `--with-aab` only when an Android App Bundle is needed for
-a store upload.
+Flutter's `build/` directory contains generated intermediate files. It is not
+the release delivery directory. To test, build and package the portable
+Windows edition, run from this directory:
 
-On Android, open **词典 → 关于与诊断** to inspect the runtime, save a local
-diagnostic report, or export and restore history, favorites, review progress,
-and text scale. These exports never contain MDX/MDD dictionary data.
+```powershell
+.\windows\build_portable.ps1
+```
 
-## Platform management
+The versioned ZIP and SHA-256 checksum are written to `windows/releases/`.
+Keep `LumaLex.exe`, its DLLs and the `data` directory together when distributing
+or running the extracted package. See the [Windows build guide](windows/README.md)
+for the full prerequisites and validation checklist.
 
-Reader behavior that differs because of WebView, memory, or lifecycle
-constraints is centralized in `lib/platform/reader_platform_policy.dart`.
-See [the platform management guide](docs/PLATFORM_MANAGEMENT.md) before making
-a shared reader or release change.
+## Development boundaries
 
-## iOS and iPadOS dictionary folder
+Reader resource and lifecycle policies are centralized in
+`lib/platform/reader_platform_policy.dart`. Windows native integration lives
+in `windows/`. See the [Windows development guide](docs/PLATFORM_MANAGEMENT.md)
+before changing the reader, screen lookup or release process.
 
-LumaLex creates a user-visible `Dictionaries` directory inside its Documents
-container. In Files, place complete dictionary folders at:
-
-`On My iPhone/iPad > LumaLex > Dictionaries`
-
-Keep each `.mdx` file beside its matching `.mdd`, `.1.mdd`, and later media
-volumes. LumaLex scans this directory at startup, when returning to the
-foreground, or when the user chooses **Scan Folder**. The existing document
-picker remains available through **Add from Another Location** for iCloud Drive
-and third-party file providers. LumaLex keeps a security-scoped bookmark when
-the provider supports persistent folder access. If it does not, LumaLex copies
-the selected folder into its own `Dictionaries` directory without overwriting
-an existing folder.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Dictionary files, local credentials, generated builds and release packages
+must not be committed. Preserve the vendored dependency fixes and license
+files needed by the Windows build.

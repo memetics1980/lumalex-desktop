@@ -15,15 +15,17 @@ not a single standalone executable.
 - Rust stable with the `x86_64-pc-windows-msvc` target
 - Windows 10 or Windows 11 x64
 
-From PowerShell or Command Prompt in the project root:
+From PowerShell or Command Prompt in the repository root:
 
 ```powershell
-windows\build_portable.bat
+cd app
+flutter pub get
+.\windows\build_portable.bat
 ```
 
 The script runs the Flutter tests, creates a release build, verifies the
 required runtime files, and writes both the portable ZIP and its SHA-256 file
-to `windows\releases\`.
+to `app\windows\releases\` in the repository.
 
 Use `windows\build_portable.bat -SkipTests` only after the same source revision
 has already passed the complete test suite.

@@ -1,0 +1,39 @@
+PODS:
+  - dictionary_bridge (0.0.1):
+    - Flutter
+  - Flutter (1.0.0)
+  - flutter_inappwebview_ios (0.0.1):
+    - Flutter
+    - flutter_inappwebview_ios/Core (= 0.0.1)
+    - OrderedSet (~> 6.0.3)
+  - flutter_inappwebview_ios/Core (0.0.1):
+    - Flutter
+    - OrderedSet (~> 6.0.3)
+  - OrderedSet (6.0.3)
+
+DEPENDENCIES:
+  - dictionary_bridge (from `.symlinks/plugins/dictionary_bridge/ios`)
+  - Flutter (from `Flutter`)
+  - flutter_inappwebview_ios (from `.symlinks/plugins/flutter_inappwebview_ios/ios`)
+
+SPEC REPOS:
+  trunk:
+    - OrderedSet
+
+EXTERNAL SOURCES:
+  dictionary_bridge:
+    :path: ".symlinks/plugins/dictionary_bridge/ios"
+  Flutter:
+    :path: Flutter
+  flutter_inappwebview_ios:
+    :path: ".symlinks/plugins/flutter_inappwebview_ios/ios"
+
+SPEC CHECKSUMS:
+  dictionary_bridge: 39db97aeb829ca44a451636d9269d7710692148c
+  Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
+  flutter_inappwebview_ios: 6f63631e2c62a7c350263b13fa5427aedefe81d4
+  OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94
+
+PODFILE CHECKSUM: 93b0beafbaf21faa38796d6f5983f8db785f7856
+
+COCOAPODS: 1.16.2

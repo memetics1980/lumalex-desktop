@@ -1,0 +1,17 @@
+[package]
+name = "dictionary_bridge"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+anyhow = "1.0"
+dictionary-core = { path = "../dictionary-core" }
+flutter_rust_bridge = "=2.13.0"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

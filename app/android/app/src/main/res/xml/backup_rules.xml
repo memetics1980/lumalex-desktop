@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- User preferences contain favorites and review progress. Rebuildable
+         dictionary bytes, indexes, and diagnostics must never enter backup. -->
+    <exclude domain="file" path="saf-staging/" />
+    <exclude domain="file" path="key-indexes/" />
+    <exclude domain="file" path="reader-events.jsonl" />
+</full-backup-content>

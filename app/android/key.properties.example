@@ -1,0 +1,6 @@
+# Copy this file to key.properties and fill in the non-secret values locally.
+# The guarded release script securely prompts for omitted passwords. CI can
+# instead provide LUMALEX_KEYSTORE_PASSWORD and LUMALEX_KEY_PASSWORD.
+# key.properties and keystore files are ignored by source control.
+storeFile=/absolute/path/to/lumalex-release.jks
+keyAlias=lumalex-release

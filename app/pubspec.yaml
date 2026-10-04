@@ -1,0 +1,44 @@
+name: local_dictionary
+description: A local-first MDX/MDD dictionary reader.
+publish_to: none
+version: 0.1.0+83
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  crypto: ^3.0.7
+  dictionary_bridge:
+    path: rust_builder
+  file_picker: ^12.3.0
+  flutter:
+    sdk: flutter
+  flutter_rust_bridge: 2.13.0
+  flutter_inappwebview: ^6.1.5
+  just_audio: ^0.10.6
+  just_audio_windows: ^0.2.3
+  path_provider: ^2.1.6
+  shared_preferences: 2.5.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+# Keep platform WebView fixes inside this project. See each vendored plugin's
+# LOCAL_PATCH.md for the small native changes applied on top of upstream.
+dependency_overrides:
+  flutter_inappwebview_ios:
+    path: ios/Plugins/flutter_inappwebview_ios
+  flutter_inappwebview_windows:
+    path: windows/Plugins/flutter_inappwebview_windows
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/branding/lumalex-icon-ui.png
+    - assets/fonts/OFL.txt
+  fonts:
+    - family: NotoSansSC
+      fonts:
+        - asset: assets/fonts/NotoSansSC-VariableFont_wght.ttf

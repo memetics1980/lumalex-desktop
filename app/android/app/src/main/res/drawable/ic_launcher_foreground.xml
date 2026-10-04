@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Keep the transparent book and star inside the common OEM safe zone.
+      Themes can now transform the foreground without treating the blue tile
+      as artwork and zooming it until the book touches the mask.
+    -->
+    <item
+        android:width="84dp"
+        android:height="84dp"
+        android:gravity="center">
+        <bitmap
+            android:src="@drawable/lumalex_launcher_foreground"
+            android:gravity="fill" />
+    </item>
+</layer-list>

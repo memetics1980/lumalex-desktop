@@ -1,0 +1,10 @@
+[workspace]
+members = ["crates/dictionary-core", "crates/dictionary-bridge"]
+resolver = "2"
+
+# `mdictlib` deliberately keeps the complete, duplicate-aware locator as the
+# public default. LumaLex also needs one narrowly scoped, block-summary-based
+# first-result path while a durable index is being built, so it carries a
+# minimal audited patch of that parser locally.
+[patch.crates-io]
+mdictlib = { path = "vendor/mdictlib" }

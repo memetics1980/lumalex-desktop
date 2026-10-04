@@ -1,0 +1,11 @@
+[package]
+name = "dictionary-core"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+description = "Local-first, safe MDX/MDD dictionary engine"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+mdictlib = { version = "0.2.3", features = ["lzo"] }
+

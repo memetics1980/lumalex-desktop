@@ -1,5 +1,9 @@
 # LumaLex Windows application
 
+[中文项目介绍](../README.md) | [English overview](../README_EN.md)
+
+[中文使用说明](../docs/USER_GUIDE.zh-CN.md) | [English user guide](../docs/USER_GUIDE.en.md)
+
 This directory contains the Flutter application used by the Windows edition
 of LumaLex. This repository supports Windows releases only; other client
 editions are maintained separately.

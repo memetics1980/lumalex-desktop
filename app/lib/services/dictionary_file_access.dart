@@ -332,12 +332,15 @@ class DictionaryFileAccess {
     _contentFingerprints.remove(mdxPath);
   }
 
+  // Direct-distribution desktop hosts read external dictionary paths normally.
+  // Only the sandboxed iOS host requires persisted native read bookmarks.
+  // A future Mac App Store host must implement folder-scoped bookmarks first.
   Future<void> retain(String mdxPath) async {
     if (Platform.isAndroid) {
       // The folder picker persists the SAF grant before returning to Dart.
       return;
     }
-    if (!Platform.isMacOS && !Platform.isIOS) {
+    if (!Platform.isIOS) {
       return;
     }
     final saved = await _channel.invokeMethod<bool>(
@@ -361,7 +364,7 @@ class DictionaryFileAccess {
           ) ??
           false;
     }
-    if (!Platform.isMacOS && !Platform.isIOS) {
+    if (!Platform.isIOS) {
       return true;
     }
     return await _channel.invokeMethod<bool>(
@@ -379,7 +382,7 @@ class DictionaryFileAccess {
       // their document URIs.
       return;
     }
-    if (!Platform.isMacOS && !Platform.isIOS) {
+    if (!Platform.isIOS) {
       return;
     }
     await _channel.invokeMethod<void>(

@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:local_dictionary/main.dart';
+import 'package:local_dictionary/app_version.dart';
 import 'package:local_dictionary/models/article.dart';
 import 'package:local_dictionary/models/dictionary_library_entry.dart';
 import 'package:local_dictionary/platform/reader_platform_policy.dart';
@@ -23,6 +24,20 @@ import 'package:local_dictionary/services/dictionary_library.dart';
 import 'package:local_dictionary/services/word_records.dart';
 
 void main() {
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('local_dictionary/text_to_speech'),
+      (call) async => call.method == 'speak' ? true : null,
+    );
+  });
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('local_dictionary/text_to_speech'), null,
+    );
+  });
+
   test('desktop destination pages expand on Windows', () {
     expect(
       destinationPageMaxWidthForOperatingSystem(
@@ -48,6 +63,21 @@ void main() {
     expect(find.text('建立你的离线词典库'), findsOneWidget);
     expect(find.text('导入第一本词典'), findsOneWidget);
   });
+
+  testWidgets('macOS exposes shared dictionary groups without Windows settings',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const DictionaryApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.library_books_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('新建分组'), findsWidgets);
+    expect(find.byKey(const ValueKey('windows-screen-lookup-toggle')), findsNothing);
+    expect(tester.takeException(), isNull);
+  }, skip: !Platform.isMacOS);
 
   testWidgets('Windows settings live below the primary destinations',
       (tester) async {
@@ -114,7 +144,7 @@ void main() {
       1000,
     );
     await tester.pumpAndSettle();
-    expect(find.text('0.1.0 · build 83 · Windows 便携版'), findsOneWidget);
+    expect(find.text('$lumalexDisplayVersion · Windows 便携版'), findsOneWidget);
 
     await tester.tap(find.text('查词'));
     await tester.pumpAndSettle();
@@ -126,9 +156,9 @@ void main() {
       isTrue,
     );
     expect(tester.takeException(), isNull);
-  });
+  }, skip: !Platform.isWindows);
 
-  testWidgets('desktop dictionary launcher survives short and compact rails',
+  testWidgets('Windows dictionary launcher survives short and compact rails',
       (tester) async {
     tester.view.physicalSize = const Size(1280, 900);
     tester.view.devicePixelRatio = 1;
@@ -170,9 +200,9 @@ void main() {
     expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.byKey(launcher), findsOneWidget);
     expect(tester.takeException(), isNull);
-  });
+  }, skip: !Platform.isWindows);
 
-  testWidgets('desktop rail switches the current lookup dictionary',
+  testWidgets('Windows rail switches the current lookup dictionary',
       (tester) async {
     const fileAccessChannel = MethodChannel('local_dictionary/file_access');
     final messenger =
@@ -219,7 +249,7 @@ void main() {
     expect(find.descendant(of: launcher, matching: find.text('Dictionary 1')),
         findsOneWidget);
     expect(tester.takeException(), isNull);
-  });
+  }, skip: !Platform.isWindows);
 
   testWidgets('compact Windows layout keeps settings reachable',
       (tester) async {
@@ -249,7 +279,7 @@ void main() {
     expect(find.text('设置'), findsWidgets);
     expect(find.text('关闭主窗口时'), findsOneWidget);
     expect(tester.takeException(), isNull);
-  });
+  }, skip: !Platform.isWindows);
 
   testWidgets('compact Windows lookup shows dictionary step arrows',
       (tester) async {
@@ -298,7 +328,7 @@ void main() {
     expect(tester.widget<IconButton>(previous).onPressed, isNull);
     expect(tester.widget<IconButton>(next).onPressed, isNull);
     expect(tester.takeException(), isNull);
-  });
+  }, skip: !Platform.isWindows);
 
   testWidgets('empty state stays overflow-free in a short window',
       (tester) async {

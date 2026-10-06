@@ -1,7 +1,7 @@
 name: local_dictionary
 description: A local-first MDX/MDD dictionary reader.
 publish_to: none
-version: 0.1.0+83
+version: 0.1.0+84
 
 environment:
   sdk: ^3.6.0

@@ -1,12 +1,14 @@
-# Windows development and release guide
+# Desktop development and release guide
 
-This guide covers the Windows edition maintained in this repository. Other
-client editions have separate repositories and release procedures.
+This repository maintains the Windows and macOS desktop hosts together.
+Keep shared application behavior in `lib/` and the Rust crates. Keep system
+integration in the respective native host. Do not create permanent per-platform
+branches or duplicate the entire application. Preserve the Windows WebView
+plugin override and its local patches.
 
-The app host contains only `windows/`. Do not regenerate Android, iOS or macOS
-host projects here. Shared dependency packages may retain their upstream
-platform implementations and metadata. The former iOS WebView override has
-been removed; keep the Windows WebView override and its local patches.
+macOS is a development preview; see [its build guide](../macos/README.md).
+Windows screen lookup, popups, secure credentials and tray behavior remain
+Windows-only until an independently validated macOS implementation exists.
 
 ## Ownership boundaries
 
@@ -16,6 +18,7 @@ been removed; keep the Windows WebView override and its local patches.
   budgets and lifecycle decisions.
 - `windows/`: Windows runner, WebView2 integration, system tray, global
   shortcuts, selected-text capture and native window behavior.
+- `macos/`: macOS runner, WebKit host and native speech.
 - `../crates/` and `../vendor/`: Rust dictionary engine, API bridge and patched
   dictionary parser.
 
@@ -85,3 +88,14 @@ request must not be interrupted by automatic closing.
 Test the extracted package against the [Windows release checklist](../windows/README.md).
 Do not use a successful development launch as a substitute for validating the
 portable release package.
+
+## Repository and release management
+
+Use `main` for both desktop platforms and short-lived feature branches. Run
+shared Flutter and Rust checks on both Windows and macOS. A platform-specific
+change must also pass its native build. A successful macOS build does not verify
+Windows native integration; follow the Windows checklist on a Windows machine.
+
+Publish platform artifacts under a shared version tag only after each artifact
+passes its own release checklist. macOS preview releases may be published
+separately while feature support catches up. Keep signing credentials out of Git.

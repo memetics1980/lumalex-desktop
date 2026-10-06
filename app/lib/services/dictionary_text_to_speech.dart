@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 
 bool supportsDictionaryTextToSpeechOn(String operatingSystem) =>
     switch (operatingSystem.toLowerCase()) {
-      'android' || 'ios' || 'windows' => true,
+      'android' || 'ios' || 'windows' || 'macos' => true,
       _ => false,
     };
 

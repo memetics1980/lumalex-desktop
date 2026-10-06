@@ -34,7 +34,7 @@ typedef WindowsSelectionLookupRequest = ({String text, String? token});
 
 enum _WindowsSelectionMenuAction { copy, lookup }
 
-@visibleForTesting
+// Also used by the aggregate reader to parse selection navigation.
 WindowsSelectionLookupRequest? windowsSelectionLookupRequestForTesting(
   String? rawUrl,
 ) {
@@ -352,14 +352,14 @@ class _ArticlePageState extends State<ArticlePage>
             // os_unfair_lock_corruption_abort when a custom item is invoked.
             // On iOS the document reports selection text and coordinates, and
             // Flutter draws the Copy/Lookup toolbar beside that selection.
-            contextMenu: Platform.isIOS || Platform.isWindows
+            contextMenu: Platform.isIOS || Platform.isWindows || Platform.isMacOS
                 ? null
                 : _selectionContextMenu,
             shouldOverrideUrlLoading: (controller, action) =>
                 _handleNavigation(controller, action.request.url?.rawValue),
             onWebViewCreated: (controller) {
               _webViewController = controller;
-              if (!Platform.isIOS && !Platform.isWindows) {
+              if (Platform.isAndroid) {
                 // Android otherwise injects a device-dependent list of
                 // browser and installed-app actions.
                 unawaited(controller.setContextMenu(_selectionContextMenu));

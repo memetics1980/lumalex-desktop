@@ -6,7 +6,7 @@ void main() {
     expect(supportsDictionaryTextToSpeechOn('android'), isTrue);
     expect(supportsDictionaryTextToSpeechOn('ios'), isTrue);
     expect(supportsDictionaryTextToSpeechOn('windows'), isTrue);
-    expect(supportsDictionaryTextToSpeechOn('macos'), isFalse);
+    expect(supportsDictionaryTextToSpeechOn('macos'), isTrue);
     expect(supportsDictionaryTextToSpeechOn('linux'), isFalse);
   });
 }

@@ -1,16 +1,18 @@
 <img src="app/assets/branding/lumalex-icon-ui.png" alt="LumaLex app icon" width="96" height="96">
 
-# LumaLex Windows
+# LumaLex Desktop
 
 [简体中文](README.md) | [English](README_EN.md)
 
 让离线词典留在本地，让查词融入阅读，让 AI 帮你判断单词在当前句子中的意思。
 
-LumaLex 是面向 **Windows 10 / 11（64 位）** 的便携式 MDX/MDD 词典阅读器，由 Flutter 与 Rust 构建。本仓库只维护 Windows 电脑端，其他客户端版本由独立仓库维护。
+LumaLex 是由 Flutter 与 Rust 构建的桌面 MDX/MDD 词典阅读器。本仓库统一维护 Windows 与 macOS，共享界面、学习数据逻辑和 Rust 词典引擎。
+
+**平台状态**：Windows 10 / 11（64 位）已有便携版；macOS 12 及以上正在开发基础查词版本，尚无正式签名安装包。屏幕取词、取词浮窗、托盘和 AI 语境释义目前仅支持 Windows。macOS 开发与验证步骤见 [macOS 构建指南](app/macos/README.md)。本文截图与取词说明来自 Windows 版本。
 
 LumaLex 不内置或分发商业词典，也不是必须联网才能使用的在线词典：导入自己的词典后即可离线查词；AI 语境释义是需要单独配置、主动触发的可选功能。
 
-[下载 Windows 便携版](https://github.com/memetics1980/lumalex-windows/releases/latest) · [完整使用说明](docs/USER_GUIDE.zh-CN.md) · [English user guide](docs/USER_GUIDE.en.md) · [Windows 构建指南](app/windows/README.md)
+[下载 Windows 便携版](https://github.com/memetics1980/lumalex-desktop/releases/latest) · [完整使用说明](docs/USER_GUIDE.zh-CN.md) · [English user guide](docs/USER_GUIDE.en.md) · [Windows 构建指南](app/windows/README.md)
 
 点击截图可查看原尺寸图片。截图中的词典和阅读材料仅用于演示，不随程序分发；AI 截图是一次实际输出示例，不代表固定或保证正确的答案。
 
@@ -98,7 +100,7 @@ flutter pub get
 .\windows\build_portable.ps1
 ```
 
-脚本运行 Flutter 测试并生成便携 ZIP 与 SHA-256 校验文件，输出到 `app/windows/releases`。这些构建产物不作为源码提交。已发布的便携包请从 [Releases](https://github.com/memetics1980/lumalex-windows/releases/latest) 下载，不要把 GitHub 的源码 ZIP 当作可运行程序。
+脚本运行 Flutter 测试并生成便携 ZIP 与 SHA-256 校验文件，输出到 `app/windows/releases`。这些构建产物不作为源码提交。已发布的便携包请从 [Releases](https://github.com/memetics1980/lumalex-desktop/releases/latest) 下载，不要把 GitHub 的源码 ZIP 当作可运行程序。
 
 开发运行与测试：
 
@@ -118,6 +120,7 @@ flutter run -d windows
 docs/                      中英文使用说明
 app/lib/                   界面与应用服务
 app/windows/               Windows 原生集成与打包
+app/macos/                 macOS 原生集成与打包
 app/test/                  Flutter 测试
 app/rust_builder/          Flutter / Rust 构建桥接
 crates/dictionary-core/    MDX/MDD 引擎

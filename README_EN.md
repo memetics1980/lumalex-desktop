@@ -1,16 +1,18 @@
 <img src="app/assets/branding/lumalex-icon-ui.png" alt="LumaLex app icon" width="96" height="96">
 
-# LumaLex Windows
+# LumaLex Desktop
 
 [简体中文](README.md) | [English](README_EN.md)
 
 Keep your dictionaries local, look up words without leaving your reading, and use AI to understand a word in context.
 
-LumaLex is a portable MDX/MDD dictionary reader for **64-bit Windows 10 and 11**, built with Flutter and Rust. This repository maintains the Windows desktop edition only; other client editions have separate repositories.
+LumaLex is a desktop MDX/MDD dictionary reader built with Flutter and Rust. This repository maintains Windows and macOS together, sharing application code and the Rust dictionary engine.
+
+**Platform status:** Windows 10/11 x64 has portable releases. The macOS 12+ basic lookup edition is in development, with no signed release yet. Screen lookup, native popups, tray integration and contextual AI currently remain Windows features. See the [macOS build guide](app/macos/README.md). Screenshots and screen-lookup instructions below describe Windows.
 
 LumaLex does not bundle or distribute commercial dictionaries. Once you import your own dictionaries, ordinary lookup works offline. Contextual AI explanations are optional, require separate configuration, and run only on request.
 
-[Download Windows portable edition](https://github.com/memetics1980/lumalex-windows/releases/latest) · [User guide](docs/USER_GUIDE.en.md) · [中文使用说明](docs/USER_GUIDE.zh-CN.md) · [Windows build guide](app/windows/README.md)
+[Download Windows portable edition](https://github.com/memetics1980/lumalex-desktop/releases/latest) · [User guide](docs/USER_GUIDE.en.md) · [中文使用说明](docs/USER_GUIDE.zh-CN.md) · [Windows build guide](app/windows/README.md)
 
 Click a screenshot to view the full-resolution original. Dictionaries and reading materials shown are examples and are not bundled with the app; AI output is an example, not a guaranteed answer.
 
@@ -98,7 +100,7 @@ flutter pub get
 .\windows\build_portable.ps1
 ```
 
-The script runs the Flutter tests and creates a portable ZIP plus a SHA-256 checksum in `app/windows/releases`. Generated packages are not committed as source files. Download published portable packages from [Releases](https://github.com/memetics1980/lumalex-windows/releases/latest), not GitHub's source-code ZIP.
+The script runs the Flutter tests and creates a portable ZIP plus a SHA-256 checksum in `app/windows/releases`. Generated packages are not committed as source files. Download published portable packages from [Releases](https://github.com/memetics1980/lumalex-desktop/releases/latest), not GitHub's source-code ZIP.
 
 For development and tests:
 
@@ -118,6 +120,7 @@ flutter run -d windows
 docs/                      Chinese and English user guides
 app/lib/                   Interface and application services
 app/windows/               Windows integration and packaging
+app/macos/                 macOS integration and packaging
 app/test/                  Flutter tests
 app/rust_builder/          Flutter / Rust build integration
 crates/dictionary-core/    MDX/MDD engine

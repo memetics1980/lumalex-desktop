@@ -1,18 +1,16 @@
-# LumaLex Windows application
+# LumaLex desktop application
 
 [中文项目介绍](../README.md) | [English overview](../README_EN.md)
 
 [中文使用说明](../docs/USER_GUIDE.zh-CN.md) | [English user guide](../docs/USER_GUIDE.en.md)
 
-This directory contains the Flutter application used by the Windows edition
-of LumaLex. This repository supports Windows releases only; other client
-editions are maintained separately.
+This directory contains the shared Flutter application for Windows and macOS.
+`lib/` and the Rust engine are shared; `windows/` and `macos/` contain native
+hosts and packaging. Mobile app hosts are not maintained in this repository.
+The Windows WebView override and its local patches remain Windows-specific.
 
-The application host project is Windows-only: `android/`, `ios/` and `macos/`
-are intentionally not included. Cross-platform packages and the shared Rust
-bridge can still contain other platform implementations; these are dependency
-internals, not additional supported application editions. Only the Windows
-WebView plugin has a local override in this repository.
+macOS is a development preview. See [macOS build and validation](macos/README.md)
+for setup, current limitations and release requirements.
 
 Use the complete repository, not this directory alone. The application depends
 on the Rust crates in `../crates`, the parser in `../vendor`, and the local
@@ -48,7 +46,7 @@ for the full prerequisites and validation checklist.
 
 Reader resource and lifecycle policies are centralized in
 `lib/platform/reader_platform_policy.dart`. Windows native integration lives
-in `windows/`. See the [Windows development guide](docs/PLATFORM_MANAGEMENT.md)
+in `windows/`. See the [desktop platform guide](docs/PLATFORM_MANAGEMENT.md)
 before changing the reader, screen lookup or release process.
 
 Dictionary files, local credentials, generated builds and release packages

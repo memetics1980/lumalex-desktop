@@ -91,6 +91,7 @@ final class ReaderPlatformPolicy {
       'android' => _android,
       'ios' => _ios,
       'windows' => _windows,
+      'macos' => _macos,
       _ => _desktop,
     };
   }
@@ -145,6 +146,24 @@ final class ReaderPlatformPolicy {
     // switcher on Windows. A second rail wastes horizontal space and changes
     // the platform-view tree when a window crosses the wide breakpoint.
     showWideDictionaryJumpRail: false,
+    supportsDictionaryGroups: true,
+    adaptiveReaderRetention: false,
+    memoryPressureRetainedReaders: 3,
+  );
+
+  // macOS keeps separate WebKit readers and the wide dictionary rail while
+  // sharing dictionary groups with Windows. WebView2 workarounds stay Windows-only.
+  static const _macos = ReaderPlatformPolicy(
+    maximumRetainedReaders: 3,
+    resourceCacheByteLimit: 64 * 1024 * 1024,
+    singleCachedResourceByteLimit: 8 * 1024 * 1024,
+    revealArticleAfterSetup: false,
+    recoverReaderAfterForeground: false,
+    keepArticlePlatformViewAlive: false,
+    aggregateDictionaryResults: false,
+    reuseRetainedReaderSlots: false,
+    preloadAdjacentDictionaryReader: true,
+    showWideDictionaryJumpRail: true,
     supportsDictionaryGroups: true,
     adaptiveReaderRetention: false,
     memoryPressureRetainedReaders: 3,

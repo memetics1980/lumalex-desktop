@@ -74,7 +74,7 @@ void main() {
     );
   });
 
-  test('desktop keeps the established non-mobile reader behavior', () {
+  test('macOS enables shared groups with separate WebKit readers', () {
     final policy = ReaderPlatformPolicy.forOperatingSystem('macos');
 
     expect(policy.maximumRetainedReaders, 3);
@@ -85,7 +85,7 @@ void main() {
     expect(policy.reuseRetainedReaderSlots, isFalse);
     expect(policy.preloadAdjacentDictionaryReader, isTrue);
     expect(policy.showWideDictionaryJumpRail, isTrue);
-    expect(policy.supportsDictionaryGroups, isFalse);
+    expect(policy.supportsDictionaryGroups, isTrue);
     expect(policy.adaptiveReaderRetention, isFalse);
   });
 

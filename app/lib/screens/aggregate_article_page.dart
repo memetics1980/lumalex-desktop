@@ -523,6 +523,7 @@ class _AggregateArticlePageState extends State<AggregateArticlePage> {
     Offset globalPosition, {
     ({String text, String? token})? initialSelection,
   }) async {
+    if (_isShowingWindowsSelectionMenu) return;
     _isShowingWindowsSelectionMenu = true;
     try {
       final selection = initialSelection ?? await _readCurrentSelection();

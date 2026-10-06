@@ -1,0 +1,47 @@
+name: Desktop checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.4'
+          channel: stable
+          cache: true
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Test dictionary engine
+        run: cargo test -p dictionary-core --locked
+      - name: Resolve Flutter dependencies
+        working-directory: app
+        run: flutter pub get
+      - name: Analyze shared application
+        working-directory: app
+        run: flutter analyze
+      - name: Test shared application
+        working-directory: app
+        run: flutter test
+      - name: Build Windows host
+        if: runner.os == 'Windows'
+        working-directory: app
+        run: flutter build windows --release
+      - name: Build macOS host
+        if: runner.os == 'macOS'
+        working-directory: app
+        run: flutter build macos --release

@@ -2,8 +2,8 @@
 
 The macOS host shares `app/lib/`, the Rust dictionary engine and the Flutter/Rust
 bridge with Windows. It targets macOS 12 or later. It is not a signed public
-release and does not yet implement screen lookup, native lookup popups,
-menu-bar persistence or contextual AI settings.
+release. It uses the same desktop settings, navigation, aggregate reader and
+popup HTML as Windows, with separate native implementations.
 
 ## Build and run
 
@@ -53,3 +53,40 @@ user files, preferences or credentials.
 
 Windows integration stays in `app/windows/`. Do not apply WebView2-specific
 workarounds to WebKit without reproducing the underlying issue on macOS.
+
+## Desktop integration
+
+- Main-window close behavior supports direct exit or hiding to the menu bar.
+  Enabling screen lookup selects background operation. The menu bar can restore
+  the main window, open settings, query selected text or exit. Dock reopening
+  restores a hidden window; Command-comma opens settings.
+- Lookup shortcuts are Command-Option-L, Command-Shift-L and Option-Q. Existing
+  storage identifiers are kept compatible with the Windows settings contract.
+  A shortcut conflict rolls back the setting instead of silently enabling it.
+- Selection capture requires Accessibility permission. Use the settings link to
+  grant it in System Settings; LumaLex does not grant itself permission. Native
+  text ranges and WebKit/Chromium text markers supply up to 500 characters of
+  context. Browser accessibility support and document-reader support vary.
+- If no selection text is exposed, compatibility mode sends Command-C to the
+  still-active source app and accepts only a new clipboard result. It changes
+  the clipboard and has no contextual AI. Secure input/password fields are
+  excluded. No screen recording, OCR or input-monitoring permission is required.
+- The native non-activating WebKit popup shares dictionary/group switching,
+  favorite controls, pronunciation, dragging, pinning and AI state with Windows.
+  It closes five seconds after the pointer leaves, with pinning, dragging and
+  pending AI pausing automatic closure. Main-window lookup remains available.
+- API keys use macOS Keychain. AI requires the user's API endpoint/model/key and
+  an explicit request. No external AI request is sent merely by selecting text.
+
+Run the native tests after resolving Flutter dependencies/building the host:
+
+```sh
+cd macos
+xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Debug \
+  -destination 'platform=macOS' -only-testing:RunnerTests test
+```
+
+Native tests cover Unicode/bounded context, local popup origins, real WebKit
+message delivery and an isolated Keychain credential. They never write or delete
+the user's API key. Validate global shortcuts and capture manually in a browser,
+a text editor and the document/PDF apps used for reading before public delivery.

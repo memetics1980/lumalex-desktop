@@ -8,7 +8,7 @@ Keep your dictionaries local, look up words without leaving your reading, and us
 
 LumaLex is a desktop MDX/MDD dictionary reader built with Flutter and Rust. This repository maintains Windows and macOS together, sharing application code and the Rust dictionary engine.
 
-**Platform status:** Windows 10/11 x64 has portable releases. The macOS 12+ basic lookup edition is in development, with no signed release yet. Screen lookup, native popups, tray integration and contextual AI currently remain Windows features. See the [macOS build guide](app/macos/README.md). Screenshots and screen-lookup instructions below describe Windows.
+**Platform status:** Windows 10/11 x64 has portable releases. The macOS 12+ edition is a development preview, with no signed public release yet. Both hosts share settings, dictionary navigation and popup content. macOS implements menu-bar persistence, global lookup shortcuts, accessibility-based selection/context capture, Keychain storage and contextual AI. Capture support depends on the source application. See the [macOS build guide](app/macos/README.md). Screenshots and screen-lookup instructions below describe Windows.
 
 LumaLex does not bundle or distribute commercial dictionaries. Once you import your own dictionaries, ordinary lookup works offline. Contextual AI explanations are optional, require separate configuration, and run only on request.
 

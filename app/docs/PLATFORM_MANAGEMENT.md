@@ -7,8 +7,10 @@ branches or duplicate the entire application. Preserve the Windows WebView
 plugin override and its local patches.
 
 macOS is a development preview; see [its build guide](../macos/README.md).
-Windows screen lookup, popups, secure credentials and tray behavior remain
-Windows-only until an independently validated macOS implementation exists.
+Screen lookup events, popup HTML, AI and settings are shared. Windows uses
+WebView2, UI Automation, Credential Manager and the system tray; macOS uses
+WebKit, accessibility text/range/marker attributes, Keychain and the menu bar.
+Keep native channel IDs distinct and preserve the existing preference keys.
 
 ## Ownership boundaries
 
@@ -18,7 +20,8 @@ Windows-only until an independently validated macOS implementation exists.
   budgets and lifecycle decisions.
 - `windows/`: Windows runner, WebView2 integration, system tray, global
   shortcuts, selected-text capture and native window behavior.
-- `macos/`: macOS runner, WebKit host and native speech.
+- `macos/`: macOS runner, WebKit popup, native speech, menu bar, global
+  shortcuts, selection capture and Keychain.
 - `../crates/` and `../vendor/`: Rust dictionary engine, API bridge and patched
   dictionary parser.
 
@@ -37,7 +40,7 @@ Disabled or temporarily inaccessible dictionaries remain visible in the
 management screen. Lookup scope counts include only enabled, accessible
 dictionaries. Dictionary switching must respect the selected group scope.
 
-## Windows reader policy
+## Shared desktop reader policy
 
 - Matching dictionary documents are isolated frames inside a long-lived
   WebView2 host. Dictionary switching changes the visible frame and preserves
@@ -45,9 +48,9 @@ dictionaries. Dictionary switching must respect the selected group scope.
 - The resource cache budget is 128 MiB; the largest individually cached
   resource is 16 MiB.
 - The retained-reader limit is 3, including after a memory-pressure signal.
-  The Windows aggregate reader is the normal rendering path.
+  The aggregate reader is the normal desktop rendering path.
 - No separate adjacent-reader preload or automatic foreground-recovery
-  reload is enabled by the Windows reader policy.
+  reload is enabled by the desktop reader policy.
 - Dictionary selection and layout changes must not recreate the native
   reader unnecessarily. Verify that resizing the window or visiting settings
   and returning to lookup preserves the article.

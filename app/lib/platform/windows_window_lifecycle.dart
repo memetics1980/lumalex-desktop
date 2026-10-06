@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 
@@ -32,4 +33,12 @@ class WindowsWindowLifecycle {
             : 'exit',
         'showFirstHideNotification': showFirstHideNotification,
       });
+}
+
+class DesktopWindowLifecycle extends WindowsWindowLifecycle {
+  DesktopWindowLifecycle()
+      : super(
+            channel: MethodChannel(Platform.isMacOS
+                ? 'local_dictionary/macos_window_lifecycle'
+                : 'local_dictionary/windows_window_lifecycle'));
 }

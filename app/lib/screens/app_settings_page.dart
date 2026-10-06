@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../app_version.dart';
+import 'dart:io';
+import '../platform/desktop_platform.dart';
 import '../platform/windows_screen_lookup.dart';
 import '../services/windows_app_settings.dart';
 
@@ -29,9 +31,15 @@ class AppSettingsPage extends StatelessWidget {
     required this.onExportLearningData,
     required this.onImportLearningData,
     required this.onSaveDiagnostics,
+    this.macosAccessibilityGranted = false,
+    this.onOpenMacosAccessibilitySettings,
+    this.onRefreshMacosAccessibilityPermission,
     super.key,
   });
 
+  final bool macosAccessibilityGranted;
+  final VoidCallback? onOpenMacosAccessibilitySettings;
+  final VoidCallback? onRefreshMacosAccessibilityPermission;
   final WindowsCloseBehavior closeBehavior;
   final bool closeBehaviorSaving;
   final ValueChanged<WindowsCloseBehavior> onCloseBehaviorChanged;
@@ -90,7 +98,7 @@ class AppSettingsPage extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       closeBehavior == WindowsCloseBehavior.hideToTray
-                          ? '点击关闭按钮后，LumaLex 继续在后台运行，可从系统托盘恢复。'
+                          ? '点击关闭按钮后，LumaLex 继续在后台运行，可从系统$desktopBackgroundLocation恢复。'
                           : '点击关闭按钮后，立即退出 LumaLex 并释放内存。',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: colors.onSurfaceVariant,
@@ -100,7 +108,7 @@ class AppSettingsPage extends StatelessWidget {
                     const SizedBox(height: 14),
                     SegmentedButton<WindowsCloseBehavior>(
                       key: const ValueKey('windows-close-behavior-control'),
-                      segments: const [
+                      segments: [
                         ButtonSegment(
                           value: WindowsCloseBehavior.exitApp,
                           icon: Icon(Icons.power_settings_new_rounded),
@@ -109,7 +117,7 @@ class AppSettingsPage extends StatelessWidget {
                         ButtonSegment(
                           value: WindowsCloseBehavior.hideToTray,
                           icon: Icon(Icons.move_to_inbox_rounded),
-                          label: Text('隐藏到托盘'),
+                          label: Text('隐藏到$desktopBackgroundLocation'),
                         ),
                       ],
                       selected: {closeBehavior},
@@ -134,7 +142,9 @@ class AppSettingsPage extends StatelessWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              '首次隐藏时会显示一次系统提示。右键托盘图标可彻底退出。',
+                              Platform.isMacOS
+                                  ? '点击菜单栏图标可恢复主窗口，也可从菜单中彻底退出。'
+                                  : '首次隐藏时会显示一次系统提示。右键托盘图标可彻底退出。',
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
@@ -286,7 +296,7 @@ class AppSettingsPage extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'API Key 保存在当前 Windows 用户的安全凭据中。LumaLex 不会自动调用 AI；点击浮窗 AI 按钮时，最多发送约 500 个字符的附近语境。支持 OpenAI chat/completions 兼容接口。',
+                            'API Key 保存在 $desktopCredentialStore 中。LumaLex 不会自动调用 AI；点击浮窗 AI 按钮时，最多发送约 500 个字符的附近语境。支持 OpenAI chat/completions 兼容接口。',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
@@ -325,6 +335,28 @@ class AppSettingsPage extends StatelessWidget {
                           : onScreenLookupEnabledChanged,
                     ),
                     const SizedBox(height: 12),
+                    if (Platform.isMacOS) ...[
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(macosAccessibilityGranted
+                            ? Icons.verified_user_outlined
+                            : Icons.lock_outline),
+                        title: Text(macosAccessibilityGranted
+                            ? '已获得辅助功能权限'
+                            : '需要辅助功能权限'),
+                        subtitle: const Text(
+                            '在系统设置中允许 LumaLex 读取选中文字。未授权时仍可使用主窗口查词。'),
+                      ),
+                      Wrap(spacing: 10, children: [
+                        OutlinedButton(
+                            onPressed: onOpenMacosAccessibilitySettings,
+                            child: const Text('打开辅助功能设置')),
+                        TextButton(
+                            onPressed: onRefreshMacosAccessibilityPermission,
+                            child: const Text('重新检查权限')),
+                      ]),
+                      const SizedBox(height: 12),
+                    ],
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 360),
                       child:
@@ -378,7 +410,7 @@ class AppSettingsPage extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '网页及支持 Windows 文本接口的应用：可读取选词和附近语境，并可使用 AI 本句释义。',
+                                '网页及支持${Platform.isMacOS ? ' macOS 辅助功能' : ' Windows 文本'}接口的应用：可读取选词和附近语境，并可使用 AI 本句释义。',
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -526,7 +558,7 @@ class AppSettingsPage extends StatelessWidget {
                                 .titleMedium
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
-                          const Text('$lumalexDisplayVersion · Windows 便携版'),
+                          Text('$lumalexDisplayVersion · $desktopEditionLabel'),
                         ],
                       ),
                     ),

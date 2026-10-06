@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [windows-2022, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -45,3 +45,7 @@ jobs:
         if: runner.os == 'macOS'
         working-directory: app
         run: flutter build macos --release
+      - name: Test macOS native integration
+        if: runner.os == 'macOS'
+        working-directory: app/macos
+        run: xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Debug -destination 'platform=macOS' -only-testing:RunnerTests test

@@ -3,6 +3,7 @@ import Cocoa
 import FlutterMacOS
 
 class MainFlutterWindow: NSWindow {
+  private var desktopServices: DesktopServices?
   private let speech = AVSpeechSynthesizer()
   private var speechChannel: FlutterMethodChannel?
 
@@ -47,6 +48,7 @@ class MainFlutterWindow: NSWindow {
         result(FlutterMethodNotImplemented)
       }
     }
+    desktopServices = DesktopServices(window: self, messenger: flutterViewController.engine.binaryMessenger)
     super.awakeFromNib()
   }
 }

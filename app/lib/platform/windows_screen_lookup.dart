@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 
@@ -7,9 +8,16 @@ enum WindowsScreenLookupShortcut {
   ctrlShiftL('Ctrl + Shift + L'),
   altQ('Alt + Q');
 
-  const WindowsScreenLookupShortcut(this.label);
+  const WindowsScreenLookupShortcut(this.windowsLabel);
 
-  final String label;
+  final String windowsLabel;
+  String get label => Platform.isMacOS
+      ? switch (this) {
+          ctrlAltL => '⌘ + ⌥ + L',
+          ctrlShiftL => '⌘ + ⇧ + L',
+          altQ => '⌥ + Q',
+        }
+      : windowsLabel;
 }
 
 WindowsScreenLookupShortcut windowsScreenLookupShortcutFromStorage(
@@ -128,4 +136,20 @@ class WindowsScreenLookup {
         'payload': payload,
         'pending': pending,
       });
+}
+
+/// Reuses the established event contract without changing Windows channel IDs.
+class DesktopScreenLookup extends WindowsScreenLookup {
+  DesktopScreenLookup()
+      : super(
+            channel: MethodChannel(Platform.isMacOS
+                ? 'local_dictionary/macos_screen_lookup'
+                : 'local_dictionary/windows_screen_lookup'));
+
+  static const _macos = MethodChannel('local_dictionary/macos_screen_lookup');
+  Future<bool> hasAccessibilityPermission() async =>
+      !Platform.isMacOS ||
+      await _macos.invokeMethod<bool>('hasAccessibilityPermission') == true;
+  Future<void> openAccessibilitySettings() =>
+      _macos.invokeMethod<void>('openAccessibilitySettings');
 }

@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:local_dictionary/main.dart';
+import 'package:local_dictionary/platform/desktop_platform.dart';
 import 'package:local_dictionary/app_version.dart';
 import 'package:local_dictionary/models/article.dart';
 import 'package:local_dictionary/models/dictionary_library_entry.dart';
@@ -25,6 +26,21 @@ import 'package:local_dictionary/services/word_records.dart';
 
 void main() {
   setUp(() {
+    for (final platform in ['windows', 'macos']) {
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(
+          MethodChannel('local_dictionary/${platform}_window_lifecycle'),
+          (call) async => null);
+      messenger.setMockMethodCallHandler(
+          MethodChannel('local_dictionary/${platform}_screen_lookup'),
+          (call) async => switch (call.method) {
+                'hasAccessibilityPermission' => true,
+                'loadAiApiKey' => '',
+                _ => null,
+              });
+    }
+
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
       const MethodChannel('local_dictionary/text_to_speech'),
@@ -32,9 +48,19 @@ void main() {
     );
   });
   tearDown(() {
+    for (final platform in ['windows', 'macos']) {
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(
+          MethodChannel('local_dictionary/${platform}_window_lifecycle'), null);
+      messenger.setMockMethodCallHandler(
+          MethodChannel('local_dictionary/${platform}_screen_lookup'), null);
+    }
+
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-      const MethodChannel('local_dictionary/text_to_speech'), null,
+      const MethodChannel('local_dictionary/text_to_speech'),
+      null,
     );
   });
 
@@ -64,7 +90,7 @@ void main() {
     expect(find.text('导入第一本词典'), findsOneWidget);
   });
 
-  testWidgets('macOS exposes shared dictionary groups without Windows settings',
+  testWidgets('macOS exposes desktop settings and dictionary groups',
       (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1;
@@ -75,11 +101,16 @@ void main() {
     await tester.tap(find.byIcon(Icons.library_books_outlined));
     await tester.pumpAndSettle();
     expect(find.text('新建分组'), findsWidgets);
-    expect(find.byKey(const ValueKey('windows-screen-lookup-toggle')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('settings-navigation-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('windows-screen-lookup-toggle')),
+        findsOneWidget);
+    expect(find.textContaining('macOS 钥匙串'), findsWidgets);
+    expect(find.text('已获得辅助功能权限'), findsOneWidget);
     expect(tester.takeException(), isNull);
   }, skip: !Platform.isMacOS);
 
-  testWidgets('Windows settings live below the primary destinations',
+  testWidgets('Desktop settings live below the primary destinations',
       (tester) async {
     const lifecycleChannel =
         MethodChannel('local_dictionary/windows_window_lifecycle');
@@ -121,7 +152,7 @@ void main() {
       isTrue,
     );
     expect(find.text('关闭主窗口时'), findsOneWidget);
-    expect(find.text('隐藏到托盘'), findsOneWidget);
+    expect(find.text('隐藏到$desktopBackgroundLocation'), findsOneWidget);
     expect(find.text('屏幕取词'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('windows-screen-lookup-toggle')),
@@ -144,7 +175,8 @@ void main() {
       1000,
     );
     await tester.pumpAndSettle();
-    expect(find.text('$lumalexDisplayVersion · Windows 便携版'), findsOneWidget);
+    expect(find.text('$lumalexDisplayVersion · $desktopEditionLabel'),
+        findsOneWidget);
 
     await tester.tap(find.text('查词'));
     await tester.pumpAndSettle();
@@ -156,9 +188,9 @@ void main() {
       isTrue,
     );
     expect(tester.takeException(), isNull);
-  }, skip: !Platform.isWindows);
+  }, skip: !isLumaLexDesktop);
 
-  testWidgets('Windows dictionary launcher survives short and compact rails',
+  testWidgets('Desktop dictionary launcher survives short and compact rails',
       (tester) async {
     tester.view.physicalSize = const Size(1280, 900);
     tester.view.devicePixelRatio = 1;
@@ -200,9 +232,9 @@ void main() {
     expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.byKey(launcher), findsOneWidget);
     expect(tester.takeException(), isNull);
-  }, skip: !Platform.isWindows);
+  }, skip: !isLumaLexDesktop);
 
-  testWidgets('Windows rail switches the current lookup dictionary',
+  testWidgets('Desktop rail switches the current lookup dictionary',
       (tester) async {
     const fileAccessChannel = MethodChannel('local_dictionary/file_access');
     final messenger =
@@ -249,9 +281,9 @@ void main() {
     expect(find.descendant(of: launcher, matching: find.text('Dictionary 1')),
         findsOneWidget);
     expect(tester.takeException(), isNull);
-  }, skip: !Platform.isWindows);
+  }, skip: !isLumaLexDesktop);
 
-  testWidgets('compact Windows layout keeps settings reachable',
+  testWidgets('compact desktop layout keeps settings reachable',
       (tester) async {
     const lifecycleChannel =
         MethodChannel('local_dictionary/windows_window_lifecycle');
@@ -279,9 +311,9 @@ void main() {
     expect(find.text('设置'), findsWidgets);
     expect(find.text('关闭主窗口时'), findsOneWidget);
     expect(tester.takeException(), isNull);
-  }, skip: !Platform.isWindows);
+  }, skip: !isLumaLexDesktop);
 
-  testWidgets('compact Windows lookup shows dictionary step arrows',
+  testWidgets('compact desktop lookup shows dictionary step arrows',
       (tester) async {
     const fileAccessChannel = MethodChannel('local_dictionary/file_access');
     final messenger =
@@ -328,7 +360,7 @@ void main() {
     expect(tester.widget<IconButton>(previous).onPressed, isNull);
     expect(tester.widget<IconButton>(next).onPressed, isNull);
     expect(tester.takeException(), isNull);
-  }, skip: !Platform.isWindows);
+  }, skip: !isLumaLexDesktop);
 
   testWidgets('empty state stays overflow-free in a short window',
       (tester) async {

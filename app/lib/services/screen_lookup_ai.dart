@@ -163,7 +163,8 @@ final class ScreenLookupAiClient {
             .set(HttpHeaders.authorizationHeader, 'Bearer ${apiKey.trim()}')
         ..headers.set(HttpHeaders.contentTypeHeader, 'application/json')
         ..headers.set(HttpHeaders.acceptHeader, 'application/json')
-        ..headers.set(HttpHeaders.userAgentHeader, 'LumaLex/Windows');
+        ..headers.set(
+            HttpHeaders.userAgentHeader, 'LumaLex/${Platform.operatingSystem}');
       request.add(
         utf8.encode(
           jsonEncode(<String, Object>{

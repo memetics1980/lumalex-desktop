@@ -24,6 +24,7 @@ import '../models/search_fallback.dart';
 import '../platform/android_process_text_window.dart';
 import '../platform/android_reader_memory.dart';
 import '../platform/reader_platform_policy.dart';
+import '../platform/desktop_platform.dart';
 import '../platform/windows_window_lifecycle.dart';
 import '../platform/windows_screen_lookup.dart';
 import '../services/app_diagnostics.dart';
@@ -426,8 +427,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   late final Future<void> _libraryReady;
   final _fileAccess = DictionaryFileAccess();
   final _appDiagnostics = AppDiagnosticsService();
-  final _windowsWindowLifecycle = WindowsWindowLifecycle();
-  final _windowsScreenLookup = WindowsScreenLookup();
+  final _windowsWindowLifecycle = DesktopWindowLifecycle();
+  final _windowsScreenLookup = DesktopScreenLookup();
   final _iosDictionaryHome = IosDictionaryHome();
   final _lookupNavigation = LookupNavigationHistory();
   final _lookupResultCache = LookupResultCache();
@@ -437,6 +438,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   bool _windowsCloseBehaviorSaving = false;
   bool _windowsScreenLookupEnabled = false;
   bool _windowsScreenLookupSaving = false;
+  bool _macosAccessibilityGranted = false;
   WindowsScreenLookupShortcut _windowsScreenLookupShortcut =
       WindowsScreenLookupShortcut.ctrlAltL;
   int _screenLookupRequest = 0;
@@ -481,7 +483,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       growable: false,
     );
     WidgetsBinding.instance.addObserver(this);
-    if (Platform.isWindows) {
+    if (isLumaLexDesktop) {
       _windowsWindowLifecycle.attach(_handleWindowsWindowLifecycleEvent);
       _windowsScreenLookup.attach(_handleWindowsScreenLookupEvent);
       unawaited(_loadWindowsAppSettings());
@@ -547,7 +549,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _desktopDictionaryExitTimer?.cancel();
     _desktopDictionaryInlineScrollController.dispose();
     _desktopDictionaryPopupScrollController.dispose();
-    if (Platform.isWindows) {
+    if (isLumaLexDesktop) {
       _windowsWindowLifecycle.detach();
       _windowsScreenLookup.detach();
     }
@@ -570,6 +572,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _scheduleWordRecordsRefresh();
+      if (Platform.isMacOS) unawaited(_refreshMacosAccessibilityPermission());
     }
     if (Platform.isAndroid) {
       if (state == AppLifecycleState.resumed) {
@@ -696,18 +699,34 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _screenLookupAiBaseUrlController.text = screenLookupAiBaseUrl;
         _screenLookupAiModelController.text = screenLookupAiModel;
       });
+      await _refreshMacosAccessibilityPermission();
       await _applyWindowsCloseBehavior();
-      final screenLookupApplied = await _applyWindowsScreenLookup();
+      final screenLookupApplied = await _applyDesktopScreenLookup();
       if (screenLookupEnabled && !screenLookupApplied && mounted) {
         setState(() => _windowsScreenLookupEnabled = false);
         await widget.windowsAppSettings.saveScreenLookupEnabled(false);
-        _showMessage('屏幕取词未能启动。快捷键可能已被占用，或系统托盘暂不可用。');
+        _showMessage('屏幕取词未能启动。快捷键可能已被占用，或系统$desktopBackgroundLocation暂不可用。');
       }
     } catch (error) {
       debugPrint('Windows app settings could not be loaded: $error');
       await _applyWindowsCloseBehavior();
-      await _applyWindowsScreenLookup();
+      await _applyDesktopScreenLookup();
     }
+  }
+
+  Future<void> _refreshMacosAccessibilityPermission() async {
+    if (!Platform.isMacOS) return;
+    try {
+      final granted = await _windowsScreenLookup.hasAccessibilityPermission();
+      if (mounted) setState(() => _macosAccessibilityGranted = granted);
+    } on MissingPluginException {
+      // Widget tests have no native accessibility service.
+    }
+  }
+
+  Future<void> _openMacosAccessibilitySettings() async {
+    await _windowsScreenLookup.openAccessibilitySettings();
+    await _refreshMacosAccessibilityPermission();
   }
 
   Future<bool> _applyWindowsCloseBehavior() async {
@@ -763,7 +782,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  Future<bool> _applyWindowsScreenLookup() async {
+  Future<bool> _applyDesktopScreenLookup() async {
     try {
       await _windowsScreenLookup.configure(
         enabled: _windowsScreenLookupEnabled,
@@ -803,7 +822,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         await _applyWindowsCloseBehavior();
       }
       await widget.windowsAppSettings.saveScreenLookupEnabled(enabled);
-      final applied = await _applyWindowsScreenLookup();
+      final applied = await _applyDesktopScreenLookup();
       if (!applied) {
         throw StateError('screen lookup could not be enabled');
       }
@@ -816,7 +835,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         widget.windowsAppSettings.saveCloseBehavior(previousCloseBehavior),
       ]);
       await _applyWindowsCloseBehavior();
-      await _applyWindowsScreenLookup();
+      await _applyDesktopScreenLookup();
       _showMessage(
         enabled ? '无法启用屏幕取词。快捷键可能已被占用，或系统托盘暂不可用。' : '无法关闭屏幕取词，请稍后重试。',
       );
@@ -841,7 +860,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     });
     try {
       await widget.windowsAppSettings.saveScreenLookupShortcut(shortcut);
-      final applied = await _applyWindowsScreenLookup();
+      final applied = await _applyDesktopScreenLookup();
       if (!applied) {
         throw StateError('screen lookup shortcut could not be registered');
       }
@@ -849,7 +868,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (!mounted) return;
       _windowsScreenLookupShortcut = previous;
       await widget.windowsAppSettings.saveScreenLookupShortcut(previous);
-      await _applyWindowsScreenLookup();
+      await _applyDesktopScreenLookup();
       _showMessage('这个快捷键已被其他程序占用，请选择另一个。');
     } finally {
       if (mounted) {
@@ -950,9 +969,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         if (typedApiKey.isNotEmpty) _windowsScreenLookupAiKeyStored = true;
         _screenLookupAiApiKeyController.clear();
       });
-      _showMessage('AI 配置已保存，API Key 已写入 Windows 安全凭据。');
+      _showMessage('AI 配置已保存，API Key 已写入 $desktopCredentialStore。');
     } on MissingPluginException {
-      _showMessage('当前环境不支持 Windows 安全凭据，API Key 未保存。');
+      _showMessage('当前环境不支持 $desktopCredentialStore，API Key 未保存。');
     } on PlatformException catch (error) {
       debugPrint('AI settings could not be saved: ${error.code}');
       _showMessage('无法安全保存 AI 配置。');
@@ -978,7 +997,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _windowsScreenLookupAiEnabled = false;
         _screenLookupAiApiKeyController.clear();
       });
-      _showMessage('已从 Windows 安全凭据中删除 API Key。');
+      _showMessage('已从 $desktopCredentialStore中删除 API Key。');
     } catch (error) {
       debugPrint('AI API key could not be deleted: $error');
       _showMessage('无法删除 API Key。');
@@ -1023,6 +1042,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<void> _handleWindowsWindowLifecycleEvent(String event) async {
     switch (event) {
+      case 'showSettingsRequested':
+        if (mounted) _showSettings();
+        break;
       case 'hiddenToTray':
         await Future.wait<void>([
           _aggregateArticleController.stopPlayback(),
@@ -1074,10 +1096,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         final y = arguments['y'];
         if (x is int && y is int) {
           await _windowsScreenLookup.showMessage(
-            title: error == 'protected' ? '此处不支持取词' : '没有读取到选中文字',
-            message: error == 'protected'
-                ? '为保护隐私，LumaLex 不会读取密码输入框。'
-                : '请先在其他应用中选中一个单词或短语，再按取词快捷键。',
+            title: error == 'permission'
+                ? '需要辅助功能权限'
+                : error == 'protected'
+                    ? '此处不支持取词'
+                    : '没有读取到选中文字',
+            message: error == 'permission'
+                ? '请在系统设置 → 隐私与安全性 → 辅助功能中允许 LumaLex，然后重试。'
+                : error == 'protected'
+                    ? '为保护隐私，LumaLex 不会读取密码输入框。'
+                    : '请先在其他应用中选中一个单词或短语，再按取词快捷键。',
             x: x,
             y: y,
           );
@@ -2016,7 +2044,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       pointerType = event.pointerType;
       originX = event.screenX;
       originY = event.screenY;
-      scale = window.devicePixelRatio || 1;
+      scale = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.lumalex ? 1 : (window.devicePixelRatio || 1);
       lastX = 0;
       lastY = 0;
       handle.classList.add('dragging');
@@ -2747,7 +2775,7 @@ $articleHtml
     // Desktop SSDs and the Rust reader cache can comfortably resolve several
     // independent MDX files in parallel. Phones retain the smaller pool to
     // avoid saturating flash and starving the visible WebView.
-    final maximumConcurrentLookups = Platform.isWindows ? 6 : 2;
+    final maximumConcurrentLookups = isLumaLexDesktop ? 6 : 2;
     var next = 0;
     Future<void> worker() async {
       while (next < entries.length) {
@@ -3577,7 +3605,7 @@ $articleHtml
     bool useIosDictionaryHome = false,
     bool showEmptyMessage = true,
   }) async {
-    if (Platform.isMacOS || Platform.isWindows || Platform.isIOS) {
+    if (isLumaLexDesktop || Platform.isIOS) {
       String? directoryPath;
       var copiedIntoIosHome = false;
       try {
@@ -5552,7 +5580,7 @@ $articleHtml
     final generatedAt = DateTime.now();
     final events = await ReaderDiagnostics.instance.readLines();
     final report = <String>[
-      'LumaLex Windows diagnostics',
+      'LumaLex $desktopPlatformName diagnostics',
       'Generated: ${generatedAt.toUtc().toIso8601String()}',
       'App: $lumalexDisplayVersion',
       'Operating system: ${Platform.operatingSystemVersion}',
@@ -5575,8 +5603,8 @@ $articleHtml
         .replaceAll(':', '-')
         .replaceAll('.', '-');
     final saved = await FilePicker.saveFile(
-      dialogTitle: '保存 LumaLex Windows 诊断报告',
-      fileName: 'LumaLex-Windows-diagnostics-$stamp.txt',
+      dialogTitle: '保存 LumaLex $desktopPlatformName 诊断报告',
+      fileName: 'LumaLex-$desktopPlatformName-diagnostics-$stamp.txt',
       bytes: Uint8List.fromList(utf8.encode(report)),
       mimeType: 'text/plain',
     );
@@ -6024,7 +6052,7 @@ $articleHtml
                                     label: Text('词典'),
                                   ),
                                 ],
-                                trailing: Platform.isWindows
+                                trailing: isLumaLexDesktop
                                     ? _buildDesktopDictionaryRail(
                                         expanded: expandSideRail,
                                         availableHeight:
@@ -6035,7 +6063,7 @@ $articleHtml
                                     railConstraints.maxHeight < 700,
                               ),
                             ),
-                            if (Platform.isWindows)
+                            if (isLumaLexDesktop)
                               _buildSettingsNavigationButton(
                                 expanded: expandSideRail,
                               ),
@@ -6288,7 +6316,7 @@ $articleHtml
               onPressed: _showAppDiagnostics,
               icon: const Icon(Icons.info_outline_rounded),
             ),
-          if (Platform.isWindows)
+          if (isLumaLexDesktop)
             IconButton(
               key: const ValueKey('compact-settings-button'),
               tooltip: '设置',
@@ -6802,6 +6830,11 @@ $articleHtml
       );
 
   Widget _buildSettingsPage() => AppSettingsPage(
+        macosAccessibilityGranted: _macosAccessibilityGranted,
+        onOpenMacosAccessibilitySettings: () =>
+            unawaited(_openMacosAccessibilitySettings()),
+        onRefreshMacosAccessibilityPermission: () =>
+            unawaited(_refreshMacosAccessibilityPermission()),
         closeBehavior: _windowsCloseBehavior,
         closeBehaviorSaving: _windowsCloseBehaviorSaving,
         onCloseBehaviorChanged: (behavior) {
@@ -6888,7 +6921,7 @@ $articleHtml
           // Keep a generous ceiling for ultra-wide displays while preserving
           // the established tablet/mobile measure on other platforms.
           constraints: BoxConstraints(
-            maxWidth: Platform.isWindows ? 2400 : 1280,
+            maxWidth: isLumaLexDesktop ? 2400 : 1280,
           ),
           child: Padding(
             padding: EdgeInsets.fromLTRB(
@@ -6909,7 +6942,7 @@ $articleHtml
                     else
                       _buildLookupHeader(
                         readerOpen: readerOpen,
-                        showSettingsAction: compact && Platform.isWindows,
+                        showSettingsAction: compact && isLumaLexDesktop,
                       ),
                     if (!widget.processTextMode &&
                         readerOpen &&
@@ -6918,7 +6951,7 @@ $articleHtml
                       const SizedBox(height: 4),
                       _buildArticleNavigationControls(),
                     ],
-                    if (!(Platform.isWindows &&
+                    if (!(isLumaLexDesktop &&
                             !compact &&
                             !widget.processTextMode) &&
                         _allAvailableEntries.isNotEmpty &&
@@ -8732,7 +8765,7 @@ $articleHtml
             : '$scopeName · $dictionaryName'
         : dictionaryName ?? '全部词典';
     final showStepButtons =
-        compact && Platform.isWindows && !widget.processTextMode;
+        compact && isLumaLexDesktop && !widget.processTextMode;
     final previousResult =
         showStepButtons ? _adjacentDictionaryResult(forward: false) : null;
     final nextResult =

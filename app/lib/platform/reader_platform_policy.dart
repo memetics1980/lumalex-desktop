@@ -151,23 +151,9 @@ final class ReaderPlatformPolicy {
     memoryPressureRetainedReaders: 3,
   );
 
-  // macOS keeps separate WebKit readers and the wide dictionary rail while
-  // sharing dictionary groups with Windows. WebView2 workarounds stay Windows-only.
-  static const _macos = ReaderPlatformPolicy(
-    maximumRetainedReaders: 3,
-    resourceCacheByteLimit: 64 * 1024 * 1024,
-    singleCachedResourceByteLimit: 8 * 1024 * 1024,
-    revealArticleAfterSetup: false,
-    recoverReaderAfterForeground: false,
-    keepArticlePlatformViewAlive: false,
-    aggregateDictionaryResults: false,
-    reuseRetainedReaderSlots: false,
-    preloadAdjacentDictionaryReader: true,
-    showWideDictionaryJumpRail: true,
-    supportsDictionaryGroups: true,
-    adaptiveReaderRetention: false,
-    memoryPressureRetainedReaders: 3,
-  );
+  // Both desktop hosts share navigation, grouping and the stable aggregate
+  // reader. Native WebView implementations remain WebView2 and WebKit.
+  static const _macos = _windows;
 
   // Preserve the former non-iOS behavior for other desktop builds, where the
   // mobile WebView reveal and iOS recovery workarounds do not apply.

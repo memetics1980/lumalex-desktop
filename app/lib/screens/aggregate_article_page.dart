@@ -9,6 +9,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../models/article.dart';
+import '../platform/desktop_platform.dart';
 import '../services/dictionary_content_server.dart';
 import '../services/dictionary_engine.dart';
 import '../services/dictionary_text_to_speech.dart';
@@ -380,7 +381,7 @@ class _AggregateArticlePageState extends State<AggregateArticlePage> {
                 allowFileAccess: false,
                 blockNetworkLoads: false,
                 cacheEnabled: true,
-                disableContextMenu: Platform.isIOS || Platform.isWindows,
+                disableContextMenu: Platform.isIOS || isLumaLexDesktop,
                 incognito: false,
                 javaScriptCanOpenWindowsAutomatically: false,
                 javaScriptEnabled: true,
@@ -395,12 +396,12 @@ class _AggregateArticlePageState extends State<AggregateArticlePage> {
                 useShouldOverrideUrlLoading: true,
                 useWideViewPort: false,
               ),
-              contextMenu: Platform.isIOS || Platform.isWindows
+              contextMenu: Platform.isIOS || isLumaLexDesktop
                   ? null
                   : _selectionContextMenu,
               onWebViewCreated: (controller) {
                 _webViewController = controller;
-                if (!Platform.isIOS && !Platform.isWindows) {
+                if (Platform.isAndroid) {
                   unawaited(controller.setContextMenu(_selectionContextMenu));
                 }
                 _registerHandlers(controller);
@@ -479,7 +480,7 @@ class _AggregateArticlePageState extends State<AggregateArticlePage> {
   Future<void> _handleWindowsSelectionMenuRequest(
     List<dynamic> arguments,
   ) async {
-    if (!Platform.isWindows || arguments.isEmpty) return;
+    if (!isLumaLexDesktop || arguments.isEmpty) return;
     final rawText = arguments[0];
     if (rawText is! String || rawText.trim().isEmpty) return;
     final rawFrameUri = arguments.elementAtOrNull(1);
@@ -1152,7 +1153,7 @@ $sections
     final selectionLookup = windowsSelectionLookupRequestForTesting(
       uri.toString(),
     );
-    if (Platform.isWindows && selectionLookup != null) {
+    if (isLumaLexDesktop && selectionLookup != null) {
       final token = selectionLookup.token;
       if (token != null) {
         unawaited(
@@ -1219,7 +1220,7 @@ $sections
   }
 
   Future<void> _handleWindowsSelectionAction(List<dynamic> arguments) async {
-    if (!Platform.isWindows || arguments.length < 3) return;
+    if (!isLumaLexDesktop || arguments.length < 3) return;
     final token = arguments[0];
     final action = arguments[1];
     final rawText = arguments[2];

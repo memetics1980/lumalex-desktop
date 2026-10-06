@@ -8,6 +8,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../models/article.dart';
+import '../platform/desktop_platform.dart';
 import '../platform/reader_platform_policy.dart';
 import '../services/dictionary_content_server.dart';
 import '../services/dictionary_engine.dart';
@@ -325,7 +326,7 @@ class _ArticlePageState extends State<ArticlePage>
               // avoids the plugin's unsafe custom-selector implementation.
               // Windows uses a Flutter-owned Copy/Lookup popup above WebView2.
               // Keep Chromium's menu disabled so the two menus never overlap.
-              disableContextMenu: Platform.isIOS || Platform.isWindows,
+              disableContextMenu: Platform.isIOS || isLumaLexDesktop,
               disableVerticalScroll: widget.fitDocumentHeight,
               incognito: false,
               javaScriptCanOpenWindowsAutomatically: false,
@@ -352,7 +353,7 @@ class _ArticlePageState extends State<ArticlePage>
             // os_unfair_lock_corruption_abort when a custom item is invoked.
             // On iOS the document reports selection text and coordinates, and
             // Flutter draws the Copy/Lookup toolbar beside that selection.
-            contextMenu: Platform.isIOS || Platform.isWindows || Platform.isMacOS
+            contextMenu: Platform.isIOS || isLumaLexDesktop
                 ? null
                 : _selectionContextMenu,
             shouldOverrideUrlLoading: (controller, action) =>
@@ -710,7 +711,7 @@ class _ArticlePageState extends State<ArticlePage>
           DateTime.now().microsecondsSinceEpoch;
       final articleUrl = WebUri(session.articleUri.toString());
       final submissionTimer = Stopwatch()..start();
-      if (Platform.isWindows) {
+      if (isLumaLexDesktop) {
         // WebView2 assigns loadData an opaque document origin even when a
         // base/history URL is supplied. That conflicts with the article CSP's
         // same-origin rule and blocks publisher CSS, fonts and scripts. Load
@@ -1081,7 +1082,7 @@ class _ArticlePageState extends State<ArticlePage>
   Future<void> _handleWindowsSelectionMenuRequest(
     List<dynamic> arguments,
   ) async {
-    if (!Platform.isWindows || arguments.isEmpty) return;
+    if (!isLumaLexDesktop || arguments.isEmpty) return;
     final selected = arguments[0];
     if (selected is! String || selected.trim().isEmpty) return;
     _lastSelectedText = selected.trim();
@@ -1179,7 +1180,7 @@ class _ArticlePageState extends State<ArticlePage>
   }
 
   Future<void> _handleWindowsSelectionAction(List<dynamic> arguments) async {
-    if (!Platform.isWindows || arguments.length < 2) return;
+    if (!isLumaLexDesktop || arguments.length < 2) return;
     final action = arguments[0];
     final selected = arguments[1];
     if (action is! String || selected is! String) return;
@@ -1418,7 +1419,7 @@ class _ArticlePageState extends State<ArticlePage>
   ) async {
     debugPrint('Dictionary navigation requested: $rawUrl');
     final selectionLookup = windowsSelectionLookupRequestForTesting(rawUrl);
-    if (Platform.isWindows && selectionLookup != null) {
+    if (isLumaLexDesktop && selectionLookup != null) {
       final headword = doubleClickLookupHeadwordForTesting(
         selectionLookup.text,
       );

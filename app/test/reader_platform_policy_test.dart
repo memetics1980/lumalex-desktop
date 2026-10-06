@@ -74,17 +74,17 @@ void main() {
     );
   });
 
-  test('macOS enables shared groups with separate WebKit readers', () {
+  test('macOS shares the desktop aggregate reader and navigation', () {
     final policy = ReaderPlatformPolicy.forOperatingSystem('macos');
 
     expect(policy.maximumRetainedReaders, 3);
     expect(policy.revealArticleAfterSetup, isFalse);
     expect(policy.recoverReaderAfterForeground, isFalse);
     expect(policy.keepArticlePlatformViewAlive, isFalse);
-    expect(policy.aggregateDictionaryResults, isFalse);
+    expect(policy.aggregateDictionaryResults, isTrue);
     expect(policy.reuseRetainedReaderSlots, isFalse);
-    expect(policy.preloadAdjacentDictionaryReader, isTrue);
-    expect(policy.showWideDictionaryJumpRail, isTrue);
+    expect(policy.preloadAdjacentDictionaryReader, isFalse);
+    expect(policy.showWideDictionaryJumpRail, isFalse);
     expect(policy.supportsDictionaryGroups, isTrue);
     expect(policy.adaptiveReaderRetention, isFalse);
   });

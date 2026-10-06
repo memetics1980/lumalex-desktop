@@ -531,6 +531,13 @@ private final class FloatingLookupWindow: NSPanel {
   override var canBecomeMain: Bool { false }
 }
 
+private final class LookupWebView: WKWebView {
+  // A global-shortcut popup must handle the first click while the source
+  // browser remains the active application.
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+  override var needsPanelToBecomeKey: Bool { true }
+}
+
 private final class WeakPopupMessageHandler: NSObject, WKScriptMessageHandler {
   weak var target: LookupPanel?
   init(_ target: LookupPanel) { self.target = target }
@@ -564,7 +571,7 @@ final class LookupPanel: NSObject, WKScriptMessageHandler, WKNavigationDelegate,
         window.webkit.messageHandlers.lumalex.postMessage(String(value));
       }};
       """, injectionTime: .atDocumentStart, forMainFrameOnly: true))
-    webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 500, height: 560), configuration: configuration)
+    webView = LookupWebView(frame: NSRect(x: 0, y: 0, width: 500, height: 560), configuration: configuration)
     webView.navigationDelegate = self
     panel = FloatingLookupWindow(contentRect: webView.frame,
       styleMask: [.borderless, .resizable, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -600,7 +607,8 @@ final class LookupPanel: NSObject, WKScriptMessageHandler, WKNavigationDelegate,
   }
   private func show(_ anchor: NSPoint) {
     position(anchor)
-    panel.orderFrontRegardless()
+    panel.makeKeyAndOrderFront(nil)
+    panel.makeFirstResponder(webView)
     lastOutside = nil
     if dismissTimer == nil {
       dismissTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in self?.checkDismissal() }

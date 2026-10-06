@@ -71,6 +71,18 @@ final class RunnerTests: XCTestCase {
     try DesktopKeychain.delete(account: account)
     XCTAssertEqual(try DesktopKeychain.load(account: account), "")
   }
+  func testPopupAcceptsImmediateInteractionWithoutActivatingMainApp() {
+    let panel = LookupPanel { _, _ in }
+    panel.showStatus(title: "forest", message: "Original local test text", anchor: NSEvent.mouseLocation)
+    defer { panel.hide() }
+    // No timer, delayed focus, or first activation click should be needed.
+    XCTAssertTrue(panel.webView.window?.isKeyWindow == true)
+    XCTAssertTrue(panel.webView.acceptsFirstMouse(for: nil))
+    XCTAssertTrue(panel.webView.needsPanelToBecomeKey)
+    XCTAssertTrue(panel.webView.window!.styleMask.contains(.nonactivatingPanel))
+    XCTAssertFalse(panel.webView.window!.isMainWindow)
+  }
+
   func testPopupBridgeDeliversActionsAndClearsPendingAIOnClose() {
     let selected = expectation(description: "dictionary selected")
     let analyzed = expectation(description: "AI requested")

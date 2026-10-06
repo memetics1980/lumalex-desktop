@@ -1610,6 +1610,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     place-items: center !important;
     font: 600 13px 'Segoe UI', 'Microsoft YaHei UI', sans-serif !important;
   }
+  /* Decorative descendants must not reset the button's pointer cursor or
+     receive hits instead of their owning control. */
+  #lumalex-screen-lookup-toolbar button * {
+    cursor: inherit !important;
+    pointer-events: none !important;
+  }
+  #lumalex-screen-lookup-toolbar .lumalex-screen-title,
+  #lumalex-screen-lookup-toolbar .lumalex-screen-title * {
+    cursor: inherit !important;
+  }
   #lumalex-screen-lookup-toolbar button.active {
     background: #d9f3f4 !important;
     border-color: #087e87 !important;
@@ -1648,6 +1658,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     height: 30px !important;
     fill: currentColor !important;
     color: inherit !important;
+    cursor: inherit !important;
+    pointer-events: none !important;
   }
   #lumalex-screen-lookup-toolbar .lumalex-screen-favorite .filled,
   #lumalex-screen-lookup-toolbar .lumalex-screen-favorite.active .outline {
@@ -1705,6 +1717,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     width: 20px !important;
     height: 20px !important;
     margin: auto !important;
+    cursor: inherit !important;
+    pointer-events: none !important;
   }
   #lumalex-screen-lookup-toolbar .lumalex-screen-step svg path {
     fill: none !important;

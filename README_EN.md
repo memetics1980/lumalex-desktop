@@ -10,14 +10,14 @@ LumaLex is a desktop MDX/MDD dictionary reader built with Flutter and Rust. This
 
 | Platform | Download and status |
 | --- | --- |
-| Windows 10/11 x64 | [Windows portable release](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build83); extract the entire archive |
+| Windows 10/11 x64 | [Windows portable build 88](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88-windows); extract the entire archive |
 | macOS 12+ | [macOS preview build 88](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88); DMG and ZIP available |
 
 The macOS package is Universal (Apple Silicon / Intel). It has been tested on Apple Silicon; Intel hardware has not yet been tested. This preview is ad-hoc signed, without Developer ID signing or Apple notarization, so first launch may require confirmation in System Settings. Both hosts share settings, dictionary navigation and popup content. macOS supports menu-bar persistence, global lookup shortcuts, accessibility-based selection/context capture, Keychain and contextual AI. Capture depends on the source app. Screenshots below show Windows.
 
 LumaLex does not bundle or distribute commercial dictionaries. Once you import your own dictionaries, ordinary lookup works offline. Contextual AI explanations are optional, require separate configuration, and run only on request.
 
-[Download Windows portable edition](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build83) · [Download macOS preview](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88) · [macOS installation and use](docs/MACOS_GUIDE.en.md) · [User guide](docs/USER_GUIDE.en.md) · [中文使用说明](docs/USER_GUIDE.zh-CN.md) · [Windows build guide](app/windows/README.md)
+[Download Windows portable edition](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88-windows) · [Download macOS preview](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88) · [macOS installation and use](docs/MACOS_GUIDE.en.md) · [User guide](docs/USER_GUIDE.en.md) · [中文使用说明](docs/USER_GUIDE.zh-CN.md) · [Windows build guide](app/windows/README.md)
 
 Click a screenshot to view the full-resolution original. Dictionaries and reading materials shown are examples and are not bundled with the app; AI output is an example, not a guaranteed answer.
 

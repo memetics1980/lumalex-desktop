@@ -10,14 +10,14 @@ LumaLex 是由 Flutter 与 Rust 构建的桌面 MDX/MDD 词典阅读器。本仓
 
 | 平台 | 下载与状态 |
 | --- | --- |
-| Windows 10 / 11 x64 | [Windows 便携版](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build83)，完整解压后运行 |
+| Windows 10 / 11 x64 | [Windows 便携版 build 88](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88-windows)，完整解压后运行 |
 | macOS 12 及以上 | [macOS 预览版 build 88](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88)，提供 DMG 与 ZIP |
 
 macOS 包为 Universal（Apple Silicon / Intel）；目前已在 Apple Silicon 上验证，Intel 尚未实机测试。预览版采用临时签名，尚未使用 Developer ID 签名或经过 Apple 公证，首次打开可能需要在系统设置中确认。两端共用设置、词典导航和浮窗内容；macOS 支持菜单栏驻留、全局快捷键、辅助功能选词与语境、Keychain 和 AI 语境释义。实际取词能力取决于来源应用提供的文本接口。本文截图来自 Windows 版本。
 
 LumaLex 不内置或分发商业词典，也不是必须联网才能使用的在线词典：导入自己的词典后即可离线查词；AI 语境释义是需要单独配置、主动触发的可选功能。
 
-[下载 Windows 便携版](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build83) · [下载 macOS 预览版](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88) · [macOS 安装与使用](docs/MACOS_GUIDE.zh-CN.md) · [完整使用说明](docs/USER_GUIDE.zh-CN.md) · [English user guide](docs/USER_GUIDE.en.md) · [Windows 构建指南](app/windows/README.md)
+[下载 Windows 便携版](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88-windows) · [下载 macOS 预览版](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88) · [macOS 安装与使用](docs/MACOS_GUIDE.zh-CN.md) · [完整使用说明](docs/USER_GUIDE.zh-CN.md) · [English user guide](docs/USER_GUIDE.en.md) · [Windows 构建指南](app/windows/README.md)
 
 点击截图可查看原尺寸图片。截图中的词典和阅读材料仅用于演示，不随程序分发；AI 截图是一次实际输出示例，不代表固定或保证正确的答案。
 

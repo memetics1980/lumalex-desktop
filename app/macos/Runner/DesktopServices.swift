@@ -390,6 +390,17 @@ struct DesktopSelection {
     var result: CFTypeRef?
     return AXUIElementCopyParameterizedAttributeValue(node, name as CFString, argument, &result) == .success ? result : nil
   }
+  private static func startMarker(_ range: CFTypeRef, node: AXUIElement) -> CFTypeRef? {
+    // AXStartTextMarkerForTextMarkerRange is not a Chromium parameterized
+    // attribute. Extract the opaque marker through ApplicationServices instead.
+    typealias CopyMarker = @convention(c) (CFTypeRef) -> Unmanaged<CFTypeRef>?
+    guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "AXTextMarkerRangeCopyStartMarker") else {
+      return parameter(node, "AXStartTextMarkerForTextMarkerRange", range)
+    }
+    let copy = unsafeBitCast(symbol, to: CopyMarker.self)
+    return copy(range)?.takeRetainedValue()
+  }
+
   private static func markerSelection(_ node: AXUIElement) -> (text: String, context: String)? {
     // WebKit and Chromium expose selections spanning DOM nodes as text markers
     // rather than ordinary CFRange attributes. Request the enclosing paragraph;
@@ -397,12 +408,12 @@ struct DesktopSelection {
     guard let range = value(node, "AXSelectedTextMarkerRange"),
           let text = parameter(node, "AXStringForTextMarkerRange", range) as? String,
           !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
-    guard let start = parameter(node, "AXStartTextMarkerForTextMarkerRange", range),
+    guard let start = startMarker(range, node: node),
           let paragraph = parameter(node, "AXParagraphTextMarkerRangeForTextMarker", start),
           let source = parameter(node, "AXStringForTextMarkerRange", paragraph) as? String,
           source.contains(text) else { return (text, "") }
     if source.utf16.count <= 500 { return (text, source) }
-    guard let paragraphStart = parameter(node, "AXStartTextMarkerForTextMarkerRange", paragraph),
+    guard let paragraphStart = startMarker(paragraph, node: node),
           let selectionIndex = parameter(node, "AXIndexForTextMarker", start) as? NSNumber,
           let paragraphIndex = parameter(node, "AXIndexForTextMarker", paragraphStart) as? NSNumber else { return (text, "") }
     return (text, boundedContext(source, selection: CFRange(location: selectionIndex.intValue - paragraphIndex.intValue, length: text.utf16.count)))
@@ -410,7 +421,7 @@ struct DesktopSelection {
   private static func read(_ node: AXUIElement) -> DesktopSelection? {
     if isProtected(node) { return DesktopSelection(text: "", context: "", protected: true) }
     let marker = markerSelection(node)
-    let text = value(node, kAXSelectedTextAttribute) as? String ?? marker?.text ?? ""
+    let text = preferredSelection(value(node, kAXSelectedTextAttribute) as? String, marker: marker?.text)
     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
     var selectedRange = CFRange(location: 0, length: 0)
     var context = marker?.context ?? ""
@@ -431,28 +442,87 @@ struct DesktopSelection {
     }
     return DesktopSelection(text: text, context: context, protected: false)
   }
+  static func preferredSelection(_ ordinary: String?, marker: String?) -> String {
+    if let ordinary = ordinary, !ordinary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return ordinary }
+    return marker ?? ""
+  }
+
+  // Depth-first exploration reaches page content before spending the budget on
+  // every browser toolbar sibling. AXContents also exposes Safari's web area.
+  static func findSelection<Node>(roots: [Node], budget: Int,
+                                  children: (Node) -> [Node],
+                                  read: (Node) -> DesktopSelection?,
+                                  same: (Node, Node) -> Bool,
+                                  withinDeadline: () -> Bool) -> DesktopSelection? {
+    var stack = roots.reversed().map { ($0, 0) }
+    var visited: [Node] = []
+    var best: DesktopSelection?
+    while let (node, depth) = stack.popLast(), visited.count < budget, withinDeadline() {
+      if visited.contains(where: { same($0, node) }) { continue }
+      visited.append(node)
+      if let selection = read(node) {
+        if selection.protected { return selection }
+        if best == nil { best = selection }
+        if !selection.context.isEmpty, best?.text == selection.text { return selection }
+      }
+      if depth < 20 { stack.append(contentsOf: children(node).prefix(80).reversed().map { ($0, depth + 1) }) }
+    }
+    return best
+  }
+
+  private static var preparedBrowsers = Set<pid_t>()
+
   static func capture(pid: pid_t) -> DesktopSelection {
     let app = AXUIElementCreateApplication(pid)
     AXUIElementSetMessagingTimeout(app, 0.15)
     let bundle = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? ""
-    if ["com.google.Chrome", "com.microsoft.edgemac", "com.brave.Browser", "org.chromium.Chromium"].contains(bundle) {
-      AXUIElementSetAttributeValue(app, "AXManualAccessibility" as CFString, kCFBooleanTrue)
-    }
-    let focused = element(value(app, kAXFocusedUIElementAttribute))
-    if let focused = focused, let selection = read(focused) { return selection }
-    var queue: [(AXUIElement, Int)] = []
-    if let focused = focused { queue.append((focused, 0)) }
-    if let window = element(value(app, kAXFocusedWindowAttribute)) { queue.append((window, 0)) }
-    let deadline = Date().addingTimeInterval(1.5)
-    var visits = 0
-    while !queue.isEmpty, visits < 100, Date() < deadline {
-      let (node, depth) = queue.removeFirst(); visits += 1
-      if let selection = read(node) { return selection }
-      if depth < 8, let children = value(node, kAXChildrenAttribute) as? [AXUIElement] {
-        queue.append(contentsOf: children.prefix(30).map { ($0, depth + 1) })
+    let browser = ["com.google.Chrome", "com.google.Chrome.canary", "com.microsoft.edgemac",
+                   "com.brave.Browser", "org.chromium.Chromium", "org.mozilla.firefox"].contains(bundle)
+    if browser, !preparedBrowsers.contains(pid) {
+      let attribute = bundle == "org.mozilla.firefox" ? "AXManualAccessibility" : "AXEnhancedUserInterface"
+      let result = AXUIElementSetAttributeValue(app, attribute as CFString, kCFBooleanTrue)
+      NSLog("LumaLex browser accessibility activation: result=%d", result.rawValue)
+      if result == .success {
+        preparedBrowsers.insert(pid)
+        // Chromium delays enabling complete accessibility mode by two seconds.
+        Thread.sleep(forTimeInterval: bundle == "org.mozilla.firefox" ? 0.15 : 2.1)
       }
     }
-    return DesktopSelection(text: "", context: "", protected: false)
+    var best: DesktopSelection?
+    // Accessibility trees may be generated asynchronously on the first request.
+    // Retry on this background queue before falling back to simulated copy.
+    for attempt in 0..<3 {
+      if attempt > 0 { Thread.sleep(forTimeInterval: 0.12) }
+      let focused = element(value(app, kAXFocusedUIElementAttribute))
+      var roots: [AXUIElement] = []
+      if let focused = focused {
+        roots.append(focused)
+        if let selection = read(focused), selection.protected { return selection }
+        var parent = element(value(focused, kAXParentAttribute))
+        for _ in 0..<6 {
+          guard let node = parent else { break }
+          roots.append(node)
+          parent = element(value(node, kAXParentAttribute))
+        }
+      }
+      if let window = element(value(app, kAXFocusedWindowAttribute)) { roots.append(window) }
+      let deadline = Date().addingTimeInterval(0.6)
+      let found = findSelection(roots: roots, budget: 180, children: { node in
+        let contents = value(node, "AXContents") as? [AXUIElement] ?? []
+        let children = value(node, kAXChildrenAttribute) as? [AXUIElement] ?? []
+        // Web areas first, followed by containers; omit menu/toolbar subtrees
+        // when traversing the window. The focused node is always read above.
+        return contents + children.filter {
+          let role = value($0, kAXRoleAttribute) as? String ?? ""
+          return role != "AXToolbar" && role != "AXMenuBar" && role != "AXMenu"
+        }
+      }, read: read, same: { CFEqual($0, $1) }, withinDeadline: { Date() < deadline })
+      if let found = found {
+        if found.protected || !found.context.isEmpty { return found }
+        if best == nil { best = found }
+      }
+    }
+    return best ?? DesktopSelection(text: "", context: "", protected: false)
   }
 }
 

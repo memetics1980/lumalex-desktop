@@ -21,6 +21,36 @@ final class RunnerTests: XCTestCase {
     XCTAssertEqual(DesktopSelection.boundedContext(text as String, selection: CFRange(location: text.length, length: 1)), "")
   }
 
+  func testEmptyOrdinarySelectionUsesBrowserTextMarker() {
+    XCTAssertEqual(DesktopSelection.preferredSelection("", marker: "forest"), "forest")
+    XCTAssertEqual(DesktopSelection.preferredSelection(" \n", marker: "forest"), "forest")
+    XCTAssertEqual(DesktopSelection.preferredSelection("tree", marker: "forest"), "tree")
+  }
+
+  func testPageTraversalReachesDeepSelectionAndFindsMatchingContext() {
+    let edges: [Int: [Int]] = [0: [1] + Array(100..<180), 1: [2], 2: [3], 3: [4], 4: [5]]
+    let found = DesktopSelection.findSelection(roots: [0], budget: 10,
+      children: { edges[$0] ?? [] }, read: { node in
+        if node == 3 { return DesktopSelection(text: "forest", context: "", protected: false) }
+        if node == 4 { return DesktopSelection(text: "other", context: "Unrelated selection", protected: false) }
+        if node == 5 { return DesktopSelection(text: "forest", context: "We walked through the forest.", protected: false) }
+        return nil
+      }, same: { $0 == $1 }, withinDeadline: { true })
+    XCTAssertEqual(found?.text, "forest")
+    XCTAssertEqual(found?.context, "We walked through the forest.")
+  }
+
+  func testTraversalBoundsCyclesAndRejectsProtectedSelection() {
+    var reads = 0
+    let found = DesktopSelection.findSelection(roots: [0], budget: 8,
+      children: { [$0, $0 + 1] }, read: { node in
+        reads += 1
+        return node == 3 ? DesktopSelection(text: "", context: "", protected: true) : nil
+      }, same: { $0 == $1 }, withinDeadline: { true })
+    XCTAssertTrue(found?.protected == true)
+    XCTAssertEqual(reads, 4)
+  }
+
   func testPopupRejectsRemoteFileAndCredentialOrigins() {
     XCTAssertTrue(LookupPanel.isLocalDictionaryURL(URL(string: "http://127.0.0.1:43210/dictionary/session/article")!))
     for raw in ["https://example.com/dictionary/session/article", "http://127.0.0.1/dictionary/session/article",

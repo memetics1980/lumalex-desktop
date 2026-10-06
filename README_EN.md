@@ -8,11 +8,16 @@ Keep your dictionaries local, look up words without leaving your reading, and us
 
 LumaLex is a desktop MDX/MDD dictionary reader built with Flutter and Rust. This repository maintains Windows and macOS together, sharing application code and the Rust dictionary engine.
 
-**Platform status:** Windows 10/11 x64 has portable releases. The macOS 12+ edition is a development preview, with no signed public release yet. Both hosts share settings, dictionary navigation and popup content. macOS implements menu-bar persistence, global lookup shortcuts, accessibility-based selection/context capture, Keychain storage and contextual AI. Capture support depends on the source application. See the [macOS build guide](app/macos/README.md). Screenshots and screen-lookup instructions below describe Windows.
+| Platform | Download and status |
+| --- | --- |
+| Windows 10/11 x64 | [Windows portable release](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build83); extract the entire archive |
+| macOS 12+ | [macOS preview build 88](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88); DMG and ZIP available |
+
+The macOS package is Universal (Apple Silicon / Intel). It has been tested on Apple Silicon; Intel hardware has not yet been tested. This preview is ad-hoc signed, without Developer ID signing or Apple notarization, so first launch may require confirmation in System Settings. Both hosts share settings, dictionary navigation and popup content. macOS supports menu-bar persistence, global lookup shortcuts, accessibility-based selection/context capture, Keychain and contextual AI. Capture depends on the source app. Screenshots below show Windows.
 
 LumaLex does not bundle or distribute commercial dictionaries. Once you import your own dictionaries, ordinary lookup works offline. Contextual AI explanations are optional, require separate configuration, and run only on request.
 
-[Download Windows portable edition](https://github.com/memetics1980/lumalex-desktop/releases/latest) · [User guide](docs/USER_GUIDE.en.md) · [中文使用说明](docs/USER_GUIDE.zh-CN.md) · [Windows build guide](app/windows/README.md)
+[Download Windows portable edition](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build83) · [Download macOS preview](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88) · [macOS installation and use](docs/MACOS_GUIDE.en.md) · [User guide](docs/USER_GUIDE.en.md) · [中文使用说明](docs/USER_GUIDE.zh-CN.md) · [Windows build guide](app/windows/README.md)
 
 Click a screenshot to view the full-resolution original. Dictionaries and reading materials shown are examples and are not bundled with the app; AI output is an example, not a guaranteed answer.
 
@@ -61,15 +66,19 @@ Word document example: AI interprets “human touch” as a personal or human qu
 
 **Limitations**: contextual AI requires usable captured context. Some PDF readers only allow copying the selected word; offline lookup still works in that mode, but contextual AI is unavailable. Screen lookup is not OCR and cannot read every application. AI can make mistakes and should not replace dictionary verification.
 
-### Designed for Windows reading
+### Desktop reading and learning
 
 - Resizable, maximized and snapped windows with High DPI support.
 - Touch-friendly hit targets for common controls.
 - A bundled Noto Sans SC UI font with its license retained.
 - Local history, favorites, review records, and learning-data export/restore.
-- A choice between exiting when the main window closes or continuing in the system tray.
+- A choice between exiting when the main window closes or continuing in the Windows system tray / macOS menu bar.
 
 ## Quick start
+
+**macOS:** Open the downloaded DMG and drag `LumaLex.app` into Applications, then launch it there. Alternatively, extract the ZIP and copy the app into Applications. See the [macOS guide](docs/MACOS_GUIDE.en.md) for first launch and Accessibility permission.
+
+**Windows:**
 
 1. Extract the complete portable Windows package into a writable folder and run `LumaLex.exe`. Keep the DLLs and `data` directory beside it.
 2. Open the dictionary page and import a folder containing your MDX files and matching MDD resources.
@@ -82,13 +91,17 @@ See the [user guide](docs/USER_GUIDE.en.md) for configuration, popup controls, P
 ## Data and privacy
 
 - Local dictionary lookup does not require AI. Enabling AI does not upload entire dictionary files.
-- The API key is stored in the current Windows user's secure credentials. Clicking AI sends the selected word and up to approximately 500 characters of nearby context to the configured service. Testing the connection also sends a sample request.
+- API keys use the current Windows user's secure credentials or macOS Keychain. Clicking AI sends the selected word and up to approximately 500 characters of nearby context to the configured service. Testing the connection also sends a sample request.
 - Do not send private or confidential text to an external AI service. The provider determines its own data-handling and billing terms.
 - Compatibility copy mode updates the system clipboard. Password fields are excluded from screen lookup.
-- Settings and learning records live in the Windows user's application-data directory. “Portable” means no program installation, not that all user data lives beside the executable.
+- Settings and learning records live in each platform's user application-data directory (Windows AppData / macOS Application Support); the platforms do not automatically synchronize. “Portable” means no program installation, not that all user data lives beside the executable.
 - Learning-data exports contain history, favorites, review progress and reading text scale, not MDX/MDD files, the dictionary library or AI credentials. Prepare your dictionaries separately and configure AI again on another computer.
 
 ## Development and build
+
+**macOS:** Install Flutter stable, Xcode, CocoaPods and Rust stable, then run `cd app && bash macos/build_release.sh`. It checks and builds the app and produces DMG, ZIP and SHA-256 files in `app/macos/releases`. See the [macOS build guide](app/macos/README.md).
+
+**Windows:**
 
 Use Windows 10/11 x64, Flutter stable with Windows desktop enabled, Visual Studio 2022 with **Desktop development with C++**, and Rust stable with the `x86_64-pc-windows-msvc` target. Dictionary rendering requires Microsoft Edge WebView2 Runtime.
 

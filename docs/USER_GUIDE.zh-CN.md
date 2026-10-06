@@ -2,6 +2,8 @@
 
 [简体中文](USER_GUIDE.zh-CN.md) | [English](USER_GUIDE.en.md) · [返回项目介绍](../README.md)
 
+macOS 用户请先阅读 [macOS 安装、权限与浮窗指南](MACOS_GUIDE.zh-CN.md)。两端共用词典管理与学习功能，但安装、权限和全局快捷键不同。
+
 本说明面向 Windows 10/11 的 64 位便携版。LumaLex 是词典阅读器：需要自行准备合法可用的 MDX/MDD 词典，AI 是可选辅助，不是离线词典的替代品。
 
 点击截图可查看原尺寸图片；截图中的词典和阅读材料不随应用分发。

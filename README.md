@@ -8,11 +8,16 @@
 
 LumaLex 是由 Flutter 与 Rust 构建的桌面 MDX/MDD 词典阅读器。本仓库统一维护 Windows 与 macOS，共享界面、学习数据逻辑和 Rust 词典引擎。
 
-**平台状态**：Windows 10 / 11（64 位）已有便携版；macOS 12 及以上为开发预览版，尚无正式签名安装包。两端共用设置、词典导航和浮窗内容；macOS 已接入菜单栏驻留、全局快捷键、辅助功能选词与语境、Keychain 和 AI 语境释义。实际取词能力取决于来源应用提供的文本接口。macOS 开发与验证步骤见 [macOS 构建指南](app/macos/README.md)。本文截图与取词说明来自 Windows 版本。
+| 平台 | 下载与状态 |
+| --- | --- |
+| Windows 10 / 11 x64 | [Windows 便携版](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build83)，完整解压后运行 |
+| macOS 12 及以上 | [macOS 预览版 build 88](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88)，提供 DMG 与 ZIP |
+
+macOS 包为 Universal（Apple Silicon / Intel）；目前已在 Apple Silicon 上验证，Intel 尚未实机测试。预览版采用临时签名，尚未使用 Developer ID 签名或经过 Apple 公证，首次打开可能需要在系统设置中确认。两端共用设置、词典导航和浮窗内容；macOS 支持菜单栏驻留、全局快捷键、辅助功能选词与语境、Keychain 和 AI 语境释义。实际取词能力取决于来源应用提供的文本接口。本文截图来自 Windows 版本。
 
 LumaLex 不内置或分发商业词典，也不是必须联网才能使用的在线词典：导入自己的词典后即可离线查词；AI 语境释义是需要单独配置、主动触发的可选功能。
 
-[下载 Windows 便携版](https://github.com/memetics1980/lumalex-desktop/releases/latest) · [完整使用说明](docs/USER_GUIDE.zh-CN.md) · [English user guide](docs/USER_GUIDE.en.md) · [Windows 构建指南](app/windows/README.md)
+[下载 Windows 便携版](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build83) · [下载 macOS 预览版](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88) · [macOS 安装与使用](docs/MACOS_GUIDE.zh-CN.md) · [完整使用说明](docs/USER_GUIDE.zh-CN.md) · [English user guide](docs/USER_GUIDE.en.md) · [Windows 构建指南](app/windows/README.md)
 
 点击截图可查看原尺寸图片。截图中的词典和阅读材料仅用于演示，不随程序分发；AI 截图是一次实际输出示例，不代表固定或保证正确的答案。
 
@@ -61,15 +66,19 @@ Word 文档示例：AI 将 human touch 解释为“人情味、人性化的接�
 
 **使用边界**：只有取到了可用的上下文才支持 AI 语境释义。部分 PDF 阅读器只能复制选中词，这时仍能查本地词典，但没有语境 AI。它不是 OCR，也不能保证读取所有应用。AI 结果可能出错，不应代替词典核查。
 
-### 为 Windows 阅读习惯设计
+### 桌面阅读与学习记录
 
 - 支持窗口缩放、最大化、分屏和高 DPI 显示。
 - 常用控件保留触摸友好的点击区域。
 - 使用随应用附带的 Noto Sans SC UI 字体，并保留字体许可。
 - 支持搜索历史、收藏、复习记录与学习数据导出/恢复。
-- 可选择关闭主窗口时直接退出，或隐藏到系统托盘继续运行。
+- 可选择关闭主窗口时直接退出，或隐藏到 Windows 系统托盘 / macOS 菜单栏继续运行。
 
 ## 快速开始
+
+**macOS**：下载 DMG，打开后将 `LumaLex.app` 拖到“应用程序”，再从那里运行；ZIP 也可解压后复制应用。首次启动和辅助功能授权步骤见 [macOS 使用指南](docs/MACOS_GUIDE.zh-CN.md)。
+
+**Windows**：
 
 1. 将 Windows 便携包完整解压到可写文件夹，运行 `LumaLex.exe`。不要只复制 EXE：DLL 和 `data` 目录必须保留在一起。
 2. 在“词典”页面选择“导入词典”，导入包含 MDX 与配套 MDD 的文件夹。
@@ -85,10 +94,14 @@ Word 文档示例：AI 将 human touch 解释为“人情味、人性化的接�
 - API Key 在 Windows 保存于当前用户的安全凭据，在 macOS 保存于钥匙串。点击浮窗 AI 按钮时，会向配置的服务发送选中词和最多约 500 个字符的附近语境；“测试连接”也会发送一条示例请求。
 - 不要对包含隐私或保密内容的文本使用外部 AI；服务商的数据处理与计费规则由服务商决定。
 - 不兼容应用的复制模式会更新系统剪贴板；密码输入框不会取词。
-- 设置和学习记录存放在 Windows 用户应用数据目录中。“便携版”指程序免安装，不代表用户数据都存放在程序文件夹。
+- 设置和学习记录存放在各自平台的用户应用数据目录中（Windows AppData / macOS Application Support），两端不会自动同步。“便携版”指程序免安装，不代表用户数据都存放在程序文件夹。
 - 学习数据导出包含历史、收藏、复习进度和阅读字号，不包含 MDX/MDD、词典库或 AI API Key。换电脑时需另外准备词典并重新配置 AI。
 
 ## 开发与构建
+
+**macOS**：准备 Flutter stable、Xcode、CocoaPods 与 Rust stable，然后运行 `cd app && bash macos/build_release.sh`。脚本检查、构建并生成 DMG、ZIP 和 SHA-256，输出到 `app/macos/releases`。详见 [macOS 构建指南](app/macos/README.md)。
+
+**Windows**：
 
 需要 Windows 10/11 x64、启用 Windows 桌面的 Flutter stable、Visual Studio 2022 的“使用 C++ 的桌面开发”组件，以及 Rust stable 的 `x86_64-pc-windows-msvc` 目标。运行词条页面需要 Microsoft Edge WebView2 Runtime。
 

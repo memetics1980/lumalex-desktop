@@ -2,6 +2,8 @@
 
 [简体中文](USER_GUIDE.zh-CN.md) | [English](USER_GUIDE.en.md) · [Project overview](../README_EN.md)
 
+For macOS, start with the [installation, permissions and popup guide](MACOS_GUIDE.en.md). Dictionary management and learning features are shared, while installation, permissions and global shortcuts differ.
+
 This guide covers the portable 64-bit Windows 10/11 edition. Bring your own legitimately obtained MDX/MDD dictionaries. AI is optional assistance, not a replacement for offline dictionaries. Chinese UI labels are included below to help locate controls; this documentation does not change the application's interface language.
 
 Click screenshots to view the full-resolution originals. The displayed dictionaries and reading materials are not bundled with the application.

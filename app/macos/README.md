@@ -1,15 +1,15 @@
 # LumaLex macOS development preview
 
 The macOS host shares `app/lib/`, the Rust dictionary engine and the Flutter/Rust
-bridge with Windows. It targets macOS 12 or later. It is not a signed public
-release. It uses the same desktop settings, navigation, aggregate reader and
+bridge with Windows. It targets macOS 12 or later. Public preview packages use ad-hoc signing; they are not Developer ID signed
+or notarized. It uses the same desktop settings, navigation, aggregate reader and
 popup HTML as Windows, with separate native implementations.
 
 ## Build and run
 
 Install Flutter stable (validated with 3.47.4), Xcode and its command-line tools,
-CocoaPods, and Rust stable. Use an Apple Silicon Mac for an arm64 build or an
-Intel Mac for an x86_64 build; the other architecture needs separate validation.
+CocoaPods, and Rust stable. The current release build contains arm64 and x86_64 slices in the app and
+frameworks. Apple Silicon is tested; Intel still needs hardware validation.
 From `app/`:
 
 ```sh
@@ -48,8 +48,9 @@ user files, preferences or credentials.
 - Check history, favorites, reviews and learning-data export/restore.
 - Resize the main window and return from settings without losing the article.
 - Test a release build independently of `flutter run` on each supported CPU.
-- Sign with Developer ID and notarize before public distribution. Keep signing
-  credentials out of Git. Package and checksum the validated app separately.
+- Use Developer ID signing and notarization for a production release. Preview
+  packages must clearly disclose ad-hoc signing and untested architectures.
+  Keep signing credentials out of Git.
 
 Windows integration stays in `app/windows/`. Do not apply WebView2-specific
 workarounds to WebKit without reproducing the underlying issue on macOS.
@@ -109,3 +110,14 @@ entry, add the revealed application, enable access, then quit and reopen it.
 Only a consistent certificate-backed signing identity can preserve permissions
 across changed binaries; do not weaken the code-signing requirement or edit TCC
 records to work around permission checks.
+
+## Package a release
+
+From `app/`, run `bash macos/build_release.sh`. This runs Flutter analysis/tests,
+builds the release app, verifies its signature and architecture slices, and
+creates DMG, ZIP and SHA-256 files under `macos/releases/`. Pass `--skip-build`
+to package an already validated release build; its version must match pubspec.
+The script does not change the app's signing identity or perform notarization.
+The DMG includes an Applications shortcut and bilingual installation notes.
+See the [Chinese user guide](../../docs/MACOS_GUIDE.zh-CN.md) or
+[English user guide](../../docs/MACOS_GUIDE.en.md) for installation and permissions.

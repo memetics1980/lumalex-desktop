@@ -150,6 +150,8 @@ class DesktopScreenLookup extends WindowsScreenLookup {
   Future<bool> hasAccessibilityPermission() async =>
       !Platform.isMacOS ||
       await _macos.invokeMethod<bool>('hasAccessibilityPermission') == true;
+  Future<void> showCurrentApplication() =>
+      _macos.invokeMethod<void>('showCurrentApplication');
   Future<void> openAccessibilitySettings() =>
       _macos.invokeMethod<void>('openAccessibilitySettings');
 }

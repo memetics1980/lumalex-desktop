@@ -3,9 +3,23 @@ import Cocoa
 import FlutterMacOS
 
 class MainFlutterWindow: NSWindow {
-  private var desktopServices: DesktopServices?
+  private(set) var desktopServices: DesktopServices?
   private let speech = AVSpeechSynthesizer()
   private var speechChannel: FlutterMethodChannel?
+
+  override func performClose(_ sender: Any?) {
+    if desktopServices?.handleMainWindowClose() == true { return }
+    super.performClose(sender)
+  }
+
+  override func close() {
+    if desktopServices?.handleMainWindowClose() == true { return }
+    super.close()
+  }
+
+  func installDesktopServices(messenger: FlutterBinaryMessenger) {
+    desktopServices = DesktopServices(window: self, messenger: messenger)
+  }
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
@@ -48,7 +62,7 @@ class MainFlutterWindow: NSWindow {
         result(FlutterMethodNotImplemented)
       }
     }
-    desktopServices = DesktopServices(window: self, messenger: flutterViewController.engine.binaryMessenger)
+    installDesktopServices(messenger: flutterViewController.engine.binaryMessenger)
     super.awakeFromNib()
   }
 }

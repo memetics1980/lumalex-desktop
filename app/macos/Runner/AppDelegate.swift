@@ -4,7 +4,12 @@ import FlutterMacOS
 @main
 class AppDelegate: FlutterAppDelegate {
   override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-    return true
+    return !((mainFlutterWindow as? MainFlutterWindow)?.desktopServices?.keepsRunningInBackground ?? false)
+  }
+
+  override func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+    (mainFlutterWindow as? MainFlutterWindow)?.desktopServices?.prepareForTermination()
+    return super.applicationShouldTerminate(sender)
   }
 
   override func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {

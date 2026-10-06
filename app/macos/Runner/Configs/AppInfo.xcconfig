@@ -12,3 +12,5 @@ PRODUCT_BUNDLE_IDENTIFIER = com.memetics.lumalex
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 memetics. All rights reserved.
+
+LUMALEX_DISPLAY_NAME = LumaLex

@@ -16,6 +16,8 @@ final class DesktopServices: NSObject, NSWindowDelegate, NSMenuItemValidation {
   private var shortcut = "ctrlAltL"
   private var lookupEnabled = false
   private var hideOnClose = false
+  private var terminating = false
+  private var windowKeyObserver: NSObjectProtocol?
   private var capturing = false
   private var activationObserver: NSObjectProtocol?
   private var lastExternalApp: NSRunningApplication?
@@ -29,15 +31,17 @@ final class DesktopServices: NSObject, NSWindowDelegate, NSMenuItemValidation {
     lookupChannel = FlutterMethodChannel(name: "local_dictionary/macos_screen_lookup", binaryMessenger: messenger)
     lifecycleChannel = FlutterMethodChannel(name: "local_dictionary/macos_window_lifecycle", binaryMessenger: messenger)
     super.init()
-    window.delegate = self
     lookupChannel.setMethodCallHandler { [weak self] call, result in self?.handleLookup(call, result: result) }
     lifecycleChannel.setMethodCallHandler { [weak self] call, result in
       guard let self = self else { result(nil); return }
       guard call.method == "setCloseBehavior" else { result(FlutterMethodNotImplemented); return }
-      self.hideOnClose = (call.arguments as? [String: Any])?["behavior"] as? String == "hideToTray"
-      self.updateStatusItem()
+      self.setCloseBehavior(hideToMenuBar: (call.arguments as? [String: Any])?["behavior"] as? String == "hideToTray")
       result(nil)
     }
+    windowKeyObserver = NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification,
+      object: window, queue: .main) { [weak self] _ in
+        self?.lifecycleChannel.invokeMethod("restoredFromTray", arguments: nil)
+      }
     lastExternalApp = NSWorkspace.shared.frontmostApplication
     activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
       forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] note in
@@ -58,22 +62,33 @@ final class DesktopServices: NSObject, NSWindowDelegate, NSMenuItemValidation {
   deinit {
     if let hotKey = hotKey { UnregisterEventHotKey(hotKey) }
     if let hotKeyHandler = hotKeyHandler { RemoveEventHandler(hotKeyHandler) }
+    if let windowKeyObserver = windowKeyObserver { NotificationCenter.default.removeObserver(windowKeyObserver) }
     if let activationObserver = activationObserver { NSWorkspace.shared.notificationCenter.removeObserver(activationObserver) }
     if let statusItem = statusItem { NSStatusBar.system.removeStatusItem(statusItem) }
   }
 
-  func windowShouldClose(_ sender: NSWindow) -> Bool {
-    if hideOnClose {
-      sender.orderOut(nil)
-      lifecycleChannel.invokeMethod("hiddenToTray", arguments: nil)
-      return false
-    }
-    NSApp.terminate(nil)
-    return false
+  var keepsRunningInBackground: Bool { !terminating && (hideOnClose || lookupEnabled) }
+  var hasMenuBarItem: Bool { statusItem?.isVisible == true && statusItem?.button != nil }
+
+  func setCloseBehavior(hideToMenuBar: Bool) {
+    hideOnClose = hideToMenuBar
+    updateStatusItem()
   }
 
-  func windowDidBecomeKey(_ notification: Notification) {
-    lifecycleChannel.invokeMethod("restoredFromTray", arguments: nil)
+  func prepareForTermination() { terminating = true }
+
+  /// Called by MainFlutterWindow itself, independent of Flutter's delegate.
+  @discardableResult func handleMainWindowClose() -> Bool {
+    guard !terminating else { return false }
+    if hideOnClose || lookupEnabled {
+      updateStatusItem()
+      window?.orderOut(nil)
+      lifecycleChannel.invokeMethod("hiddenToTray", arguments: nil)
+    } else {
+      terminating = true
+      NSApp.terminate(nil)
+    }
+    return true
   }
 
   @objc func restore() {
@@ -87,7 +102,7 @@ final class DesktopServices: NSObject, NSWindowDelegate, NSMenuItemValidation {
     lifecycleChannel.invokeMethod("showSettingsRequested", arguments: nil)
   }
   @objc private func lookupFromMenu() { requestSelection() }
-  @objc private func quit() { NSApp.terminate(nil) }
+  @objc private func quit() { prepareForTermination(); NSApp.terminate(nil) }
 
   func validateMenuItem(_ item: NSMenuItem) -> Bool {
     item.action == #selector(lookupFromMenu) ? lookupEnabled : true
@@ -116,8 +131,13 @@ final class DesktopServices: NSObject, NSWindowDelegate, NSMenuItemValidation {
     }
     if statusItem == nil {
       statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-      statusItem?.button?.image = NSImage(systemSymbolName: "book.closed", accessibilityDescription: "LumaLex")
+      let image = NSImage(systemSymbolName: "book.closed", accessibilityDescription: "LumaLex")
+      image?.isTemplate = true
+      statusItem?.button?.image = image
+      statusItem?.button?.title = image == nil ? "LL" : ""
       statusItem?.button?.toolTip = "LumaLex"
+      statusItem?.button?.setAccessibilityLabel("LumaLex 菜单栏")
+      statusItem?.isVisible = true
     }
     let menu = NSMenu()
     for (title, action) in [("打开 LumaLex", #selector(restore)), ("设置…", #selector(showSettings)),
@@ -167,12 +187,15 @@ final class DesktopServices: NSObject, NSWindowDelegate, NSMenuItemValidation {
       case "configure":
         try configure(enabled: args["enabled"] as? Bool ?? false, shortcut: args["shortcut"] as? String ?? "ctrlAltL")
         result(nil)
-      case "hasAccessibilityPermission": result(AXIsProcessTrusted())
+      case "hasAccessibilityPermission": result(DesktopAccessibilityPermission.isGranted())
       case "openAccessibilitySettings":
         AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
           NSWorkspace.shared.open(url)
         }
+        result(nil)
+      case "showCurrentApplication":
+        NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
         result(nil)
       case "showLoading":
         popup.query = args["query"] as? String ?? ""
@@ -218,7 +241,7 @@ final class DesktopServices: NSObject, NSWindowDelegate, NSMenuItemValidation {
     guard lookupEnabled, !capturing else { return }
     let anchor = NSEvent.mouseLocation
     NSLog("LumaLex selection request received")
-    guard AXIsProcessTrusted() else { unavailable("permission", anchor: anchor); return }
+    guard DesktopAccessibilityPermission.isGranted() else { unavailable("permission", anchor: anchor); return }
     guard !IsSecureEventInputEnabled() else { unavailable("protected", anchor: anchor); return }
     let frontmost = NSWorkspace.shared.frontmostApplication
     let target = frontmost?.processIdentifier == ProcessInfo.processInfo.processIdentifier ? lastExternalApp : frontmost
@@ -271,11 +294,33 @@ final class DesktopServices: NSObject, NSWindowDelegate, NSMenuItemValidation {
   }
 }
 
+enum DesktopAccessibilityPermission {
+  static func resolve(reportedTrusted: Bool, probeResult: AXError?) -> Bool {
+    if reportedTrusted { return true }
+    // A successful, permission-checked AX request is stronger evidence than
+    // a cached false result. Never treat a timeout or API denial as a grant.
+    return probeResult == .success
+  }
+
+  static func isGranted() -> Bool {
+    let reported = AXIsProcessTrusted()
+    if reported { return true }
+    guard let finder = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.finder").first else {
+      return false
+    }
+    let application = AXUIElementCreateApplication(finder.processIdentifier)
+    AXUIElementSetMessagingTimeout(application, 0.1)
+    var ignored: CFTypeRef?
+    let result = AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &ignored)
+    return resolve(reportedTrusted: false, probeResult: result)
+  }
+}
+
 enum DesktopServiceError: Error { case message(String, String) }
 
 enum DesktopKeychain {
   private static func identity(_ account: String) -> [String: Any] { [kSecClass as String: kSecClassGenericPassword,
-    kSecAttrService as String: "com.memetics.lumalex.contextual-ai", kSecAttrAccount as String: account] }
+    kSecAttrService as String: (Bundle.main.bundleIdentifier ?? "com.memetics.lumalex") + ".contextual-ai", kSecAttrAccount as String: account] }
   static func load(account: String = "api-key") throws -> String {
     var query = identity(account); query[kSecReturnData as String] = true; query[kSecMatchLimit as String] = kSecMatchLimitOne
     var value: CFTypeRef?

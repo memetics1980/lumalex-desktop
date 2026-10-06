@@ -107,6 +107,7 @@ void main() {
         findsOneWidget);
     expect(find.textContaining('macOS 钥匙串'), findsWidgets);
     expect(find.text('已获得辅助功能权限'), findsOneWidget);
+    expect(find.text('在 Finder 中显示当前应用'), findsOneWidget);
     expect(tester.takeException(), isNull);
   }, skip: !Platform.isMacOS);
 

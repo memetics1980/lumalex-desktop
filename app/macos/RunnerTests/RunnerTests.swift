@@ -87,4 +87,60 @@ final class RunnerTests: XCTestCase {
     XCTAssertLessThanOrEqual(selection.context.count, 500)
   }
 
+  func testCloseButtonHidesWithoutDependingOnWindowDelegate() {
+    let messenger = TestMessenger()
+    let window = MainFlutterWindow(contentRect: NSRect(x: 100, y: 100, width: 400, height: 300),
+                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
+    window.isReleasedWhenClosed = false
+    window.installDesktopServices(messenger: messenger)
+    let replacement = ReplacementWindowDelegate()
+    window.delegate = replacement
+    messenger.call("local_dictionary/macos_window_lifecycle", method: "setCloseBehavior", arguments: ["behavior": "hideToTray"])
+    window.makeKeyAndOrderFront(nil)
+    window.performClose(nil)
+    XCTAssertFalse(window.isVisible)
+    XCTAssertTrue(window.desktopServices!.hasMenuBarItem)
+    XCTAssertTrue(window.desktopServices!.keepsRunningInBackground)
+    XCTAssertTrue(messenger.events.contains("hiddenToTray"))
+    window.desktopServices!.restore()
+    XCTAssertTrue(window.isVisible)
+    // Test the direct close path too: this bypasses NSWindowDelegate callbacks.
+    window.close()
+    XCTAssertFalse(window.isVisible)
+    XCTAssertTrue(window.desktopServices!.hasMenuBarItem)
+    window.desktopServices!.prepareForTermination()
+    window.close()
+  }
+
+  func testPermissionProbeDoesNotConvertDenialsOrTimeoutsIntoGrants() {
+    XCTAssertTrue(DesktopAccessibilityPermission.resolve(reportedTrusted: true, probeResult: nil))
+    XCTAssertTrue(DesktopAccessibilityPermission.resolve(reportedTrusted: false, probeResult: .success))
+    XCTAssertFalse(DesktopAccessibilityPermission.resolve(reportedTrusted: false, probeResult: .apiDisabled))
+    XCTAssertFalse(DesktopAccessibilityPermission.resolve(reportedTrusted: false, probeResult: .cannotComplete))
+    XCTAssertFalse(DesktopAccessibilityPermission.resolve(reportedTrusted: false, probeResult: nil))
+  }
+
+}
+
+private final class ReplacementWindowDelegate: NSObject, NSWindowDelegate {}
+
+private final class TestMessenger: NSObject, FlutterBinaryMessenger {
+  var handlers: [String: FlutterBinaryMessageHandler] = [:]
+  var events: [String] = []
+  func send(onChannel channel: String, message: Data?) {
+    if let message = message { events.append(FlutterStandardMethodCodec.sharedInstance().decodeMethodCall(message).method) }
+  }
+  func send(onChannel channel: String, message: Data?, binaryReply callback: FlutterBinaryReply?) {
+    send(onChannel: channel, message: message)
+    callback?(nil)
+  }
+  func setMessageHandlerOnChannel(_ channel: String, binaryMessageHandler handler: FlutterBinaryMessageHandler?) -> FlutterBinaryMessengerConnection {
+    handlers[channel] = handler
+    return 1
+  }
+  func cleanUpConnection(_ connection: FlutterBinaryMessengerConnection) {}
+  func call(_ channel: String, method: String, arguments: Any) {
+    let call = FlutterStandardMethodCodec.sharedInstance().encode(FlutterMethodCall(methodName: method, arguments: arguments))
+    handlers[channel]?(call, { _ in })
+  }
 }

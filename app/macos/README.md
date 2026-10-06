@@ -90,3 +90,22 @@ Native tests cover Unicode/bounded context, local popup origins, real WebKit
 message delivery and an isolated Keychain credential. They never write or delete
 the user's API key. Validate global shortcuts and capture manually in a browser,
 a text editor and the document/PDF apps used for reading before public delivery.
+
+## Close behavior and development permissions
+
+The main window intercepts its own `performClose` and `close` actions. It does
+not replace Flutter's window delegate. Hiding retains the window/engine and the
+menu-bar item; explicit Quit remains an application termination request.
+
+Release uses `com.memetics.lumalex`. Debug/test builds use
+`com.memetics.lumalex.debug`, with a separate display name, preferences and
+Keychain service so a test host cannot masquerade as the release application.
+
+Local builds use ad-hoc signing unless a real signing identity is configured.
+Its designated requirement changes when the executable is rebuilt. An enabled
+old entry in Accessibility settings may therefore not authorize the current
+binary. Use “Show current application in Finder” in Settings, remove the stale
+entry, add the revealed application, enable access, then quit and reopen it.
+Only a consistent certificate-backed signing identity can preserve permissions
+across changed binaries; do not weaken the code-signing requirement or edit TCC
+records to work around permission checks.

@@ -34,12 +34,14 @@ class AppSettingsPage extends StatelessWidget {
     this.macosAccessibilityGranted = false,
     this.onOpenMacosAccessibilitySettings,
     this.onRefreshMacosAccessibilityPermission,
+    this.onShowCurrentMacosApplication,
     super.key,
   });
 
   final bool macosAccessibilityGranted;
   final VoidCallback? onOpenMacosAccessibilitySettings;
   final VoidCallback? onRefreshMacosAccessibilityPermission;
+  final VoidCallback? onShowCurrentMacosApplication;
   final WindowsCloseBehavior closeBehavior;
   final bool closeBehaviorSaving;
   final ValueChanged<WindowsCloseBehavior> onCloseBehaviorChanged;
@@ -345,7 +347,7 @@ class AppSettingsPage extends StatelessWidget {
                             ? '已获得辅助功能权限'
                             : '需要辅助功能权限'),
                         subtitle: const Text(
-                            '在系统设置中允许 LumaLex 读取选中文字。未授权时仍可使用主窗口查词。'),
+                            '若系统已开启权限但这里仍未授权，请移除旧 LumaLex 条目，重新添加当前应用并开启权限，然后彻底退出并重开 LumaLex。重新编译的临时签名版本可能需要重新授权。'),
                       ),
                       Wrap(spacing: 10, children: [
                         OutlinedButton(
@@ -356,6 +358,14 @@ class AppSettingsPage extends StatelessWidget {
                             child: const Text('重新检查权限')),
                       ]),
                       const SizedBox(height: 12),
+                    ],
+                    if (Platform.isMacOS) ...[
+                      TextButton.icon(
+                        onPressed: onShowCurrentMacosApplication,
+                        icon: const Icon(Icons.folder_open_outlined),
+                        label: const Text('在 Finder 中显示当前应用'),
+                      ),
+                      const SizedBox(height: 8),
                     ],
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 360),

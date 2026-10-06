@@ -1102,7 +1102,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     ? '此处不支持取词'
                     : '没有读取到选中文字',
             message: error == 'permission'
-                ? '请在系统设置 → 隐私与安全性 → 辅助功能中允许 LumaLex，然后重试。'
+                ? '当前运行的 LumaLex 未获得辅助功能权限。若系统已显示开启，请移除旧条目，重新添加设置页“在 Finder 中显示当前应用”所定位的应用，开启权限后彻底退出并重开 LumaLex。'
                 : error == 'protected'
                     ? '为保护隐私，LumaLex 不会读取密码输入框。'
                     : '请先在其他应用中选中一个单词或短语，再按取词快捷键。',
@@ -6831,6 +6831,8 @@ $articleHtml
 
   Widget _buildSettingsPage() => AppSettingsPage(
         macosAccessibilityGranted: _macosAccessibilityGranted,
+        onShowCurrentMacosApplication: () =>
+            unawaited(_windowsScreenLookup.showCurrentApplication()),
         onOpenMacosAccessibilitySettings: () =>
             unawaited(_openMacosAccessibilitySettings()),
         onRefreshMacosAccessibilityPermission: () =>

@@ -11,6 +11,7 @@
 
 #include "flutter/generated_plugin_registrant.h"
 #include "resource.h"
+#include "screen_lookup_hotkey.h"
 
 namespace {
 
@@ -24,7 +25,6 @@ constexpr wchar_t kAiApiKeyCredentialTarget[] =
 constexpr UINT kTrayCallbackMessage = WM_APP + 1;
 constexpr UINT kScreenLookupReadyMessage = WM_APP + 2;
 constexpr UINT kTrayIconId = 1;
-constexpr int kScreenLookupHotkeyId = 2;
 constexpr UINT kTrayOpenCommand = 1001;
 constexpr UINT kTrayExitCommand = 1002;
 
@@ -208,7 +208,7 @@ bool FlutterWindow::OnCreate() {
 
 void FlutterWindow::OnDestroy() {
   if (screen_lookup_hotkey_registered_) {
-    UnregisterHotKey(GetHandle(), kScreenLookupHotkeyId);
+    UnregisterHotKey(GetHandle(), screen_lookup_hotkey_id_);
     screen_lookup_hotkey_registered_ = false;
   }
   screen_lookup_popup_.reset();
@@ -240,6 +240,20 @@ void FlutterWindow::RegisterScreenLookupChannel() {
         const auto* arguments = ReadArguments(call);
         if (arguments == nullptr) {
           result->Error("invalid_arguments", "Missing screen lookup settings.");
+          return;
+        }
+        if (call.method_name() == "setShortcutRecording") {
+          const auto recording = ReadBoolArgument(*arguments, "recording");
+          if (!recording.has_value()) {
+            result->Error("invalid_arguments", "Missing recording state.");
+            return;
+          }
+          std::string error;
+          if (!SetShortcutRecording(*recording, &error)) {
+            result->Error(error, "Unable to resume the lookup shortcut.");
+            return;
+          }
+          result->Success(flutter::EncodableValue());
           return;
         }
         if (call.method_name() == "configure") {
@@ -341,6 +355,10 @@ void FlutterWindow::RegisterScreenLookupChannel() {
             result->Error("invalid_arguments", "Missing article URI.");
             return;
           }
+          const auto query = ReadStringArgument(*arguments, "query");
+          if (query.has_value() && !query->empty() && query->size() <= 512) {
+            current_screen_lookup_query_ = Utf16FromUtf8(*query);
+          }
           screen_lookup_popup_->ShowArticle(Utf16FromUtf8(*uri),
                                             current_screen_lookup_anchor_);
           result->Success(flutter::EncodableValue());
@@ -366,12 +384,12 @@ void FlutterWindow::RegisterScreenLookupChannel() {
 bool FlutterWindow::ConfigureScreenLookup(bool enabled,
                                           const std::string& shortcut,
                                           std::string* error) {
-  if (screen_lookup_hotkey_registered_) {
-    UnregisterHotKey(GetHandle(), kScreenLookupHotkeyId);
-    screen_lookup_hotkey_registered_ = false;
-  }
-  screen_lookup_enabled_ = false;
   if (!enabled) {
+    if (screen_lookup_hotkey_registered_) {
+      UnregisterHotKey(GetHandle(), screen_lookup_hotkey_id_);
+      screen_lookup_hotkey_registered_ = false;
+    }
+    screen_lookup_enabled_ = false;
     if (screen_lookup_popup_ != nullptr) {
       screen_lookup_popup_->Hide();
     }
@@ -381,43 +399,79 @@ bool FlutterWindow::ConfigureScreenLookup(bool enabled,
     return true;
   }
 
-  UINT modifiers = MOD_CONTROL | MOD_ALT | MOD_NOREPEAT;
-  UINT key = 'L';
-  if (shortcut == "ctrlShiftL") {
-    modifiers = MOD_CONTROL | MOD_SHIFT | MOD_NOREPEAT;
-  } else if (shortcut == "altQ") {
-    modifiers = MOD_ALT | MOD_NOREPEAT;
-    key = 'Q';
-  } else if (shortcut != "ctrlAltL") {
+  ScreenLookupHotkey hotkey{};
+  if (!ParseScreenLookupHotkey(shortcut, &hotkey)) {
     if (error != nullptr) {
       *error = "invalid_shortcut";
     }
     return false;
   }
-  if (!RegisterHotKey(GetHandle(), kScreenLookupHotkeyId, modifiers, key)) {
+  const UINT modifiers = hotkey.modifiers | MOD_NOREPEAT;
+  const UINT key = hotkey.key;
+  const bool had_tray_icon = tray_icon_added_;
+  if (!AddTrayIcon()) {
+    if (error != nullptr) *error = "tray_unavailable";
+    return false;
+  }
+  if (screen_lookup_hotkey_registered_ &&
+      screen_lookup_hotkey_modifiers_ == modifiers &&
+      screen_lookup_hotkey_key_ == key) return true;
+  if (screen_lookup_shortcut_recording_) {
+    screen_lookup_hotkey_modifiers_ = modifiers;
+    screen_lookup_hotkey_key_ = key;
+    screen_lookup_enabled_ = true;
+    return true;
+  }
+  // Register the replacement first. A conflict must not disable the old key.
+  const int candidate_id = screen_lookup_hotkey_id_ == 2 ? 3 : 2;
+  if (!RegisterHotKey(GetHandle(), candidate_id, modifiers, key)) {
+    if (!had_tray_icon && !hide_to_tray_on_close_) RemoveTrayIcon();
     if (error != nullptr) {
       *error = "hotkey_unavailable";
     }
     return false;
   }
+  if (screen_lookup_hotkey_registered_) {
+    UnregisterHotKey(GetHandle(), screen_lookup_hotkey_id_);
+  }
+  screen_lookup_hotkey_id_ = candidate_id;
+  screen_lookup_hotkey_modifiers_ = modifiers;
+  screen_lookup_hotkey_key_ = key;
   screen_lookup_hotkey_registered_ = true;
   screen_lookup_enabled_ = true;
-  if (!AddTrayIcon()) {
-    UnregisterHotKey(GetHandle(), kScreenLookupHotkeyId);
-    screen_lookup_hotkey_registered_ = false;
-    screen_lookup_enabled_ = false;
-    if (error != nullptr) {
-      *error = "tray_unavailable";
+  return true;
+}
+
+bool FlutterWindow::SetShortcutRecording(bool recording, std::string* error) {
+  if (recording == screen_lookup_shortcut_recording_) return true;
+  if (recording) {
+    if (screen_lookup_hotkey_registered_) {
+      if (!UnregisterHotKey(GetHandle(), screen_lookup_hotkey_id_)) {
+        if (error != nullptr) *error = "hotkey_suspend_failed";
+        return false;
+      }
+      screen_lookup_hotkey_registered_ = false;
     }
+    if (screen_lookup_popup_ != nullptr) screen_lookup_popup_->Hide();
+    screen_lookup_shortcut_recording_ = true;
+    return true;
+  }
+  screen_lookup_shortcut_recording_ = false;
+  if (!screen_lookup_enabled_) return true;
+  if (!RegisterHotKey(GetHandle(), screen_lookup_hotkey_id_,
+                      screen_lookup_hotkey_modifiers_, screen_lookup_hotkey_key_)) {
+    screen_lookup_enabled_ = false;
+    if (error != nullptr) *error = "hotkey_unavailable";
     return false;
   }
+  screen_lookup_hotkey_registered_ = true;
   return true;
 }
 
 void FlutterWindow::HandleScreenLookupResult(ScreenLookupResult* raw_result) {
   std::unique_ptr<ScreenLookupResult> result(raw_result);
   if (result == nullptr || screen_lookup_channel_ == nullptr ||
-      !screen_lookup_enabled_) {
+      !screen_lookup_enabled_ || screen_lookup_shortcut_recording_) {
     return;
   }
   current_screen_lookup_anchor_ = result->anchor;
@@ -464,6 +518,19 @@ void FlutterWindow::NotifyScreenLookupAction(const std::string& action) {
     screen_lookup_channel_->InvokeMethod("toggleFavorite", nullptr);
   } else if (action == "analyzeAi") {
     screen_lookup_channel_->InvokeMethod("analyzeAi", nullptr);
+  } else if (action == "viewRelatedHeadword") {
+    screen_lookup_channel_->InvokeMethod("viewRelatedHeadword", nullptr);
+  } else if (action == "viewAiLemma") {
+    screen_lookup_channel_->InvokeMethod("viewAiLemma", nullptr);
+  } else if (action.rfind("lookupForm:", 0) == 0) {
+    const char* raw_index = action.c_str() + std::string("lookupForm:").size();
+    char* end = nullptr;
+    const long index = std::strtol(raw_index, &end, 10);
+    if (end != raw_index && end != nullptr && *end == '\0' && index >= -1 && index <= 7) {
+      flutter::EncodableMap arguments;
+      arguments[flutter::EncodableValue("index")] = flutter::EncodableValue(static_cast<int32_t>(index));
+      screen_lookup_channel_->InvokeMethod("selectLookupForm", std::make_unique<flutter::EncodableValue>(arguments));
+    }
   } else if (action == "pin:on" || action == "pin:off") {
     flutter::EncodableMap arguments;
     arguments[flutter::EncodableValue("pinned")] =
@@ -787,8 +854,9 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     HandleScreenLookupResult(reinterpret_cast<ScreenLookupResult*>(lparam));
     return 0;
   }
-  if (message == WM_HOTKEY && wparam == kScreenLookupHotkeyId) {
-    if (screen_lookup_enabled_) {
+  if (message == WM_HOTKEY && wparam == static_cast<WPARAM>(screen_lookup_hotkey_id_)) {
+    if (screen_lookup_enabled_ && screen_lookup_hotkey_registered_ &&
+        !screen_lookup_shortcut_recording_) {
       screen_lookup_service_.RequestSelection(hwnd, kScreenLookupReadyMessage);
     }
     return 0;

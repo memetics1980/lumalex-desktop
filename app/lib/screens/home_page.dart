@@ -21,6 +21,8 @@ import '../models/review_card.dart';
 import '../models/retained_reader_order.dart';
 import '../models/retained_reader_slots.dart';
 import '../models/search_fallback.dart';
+import '../models/lookup_form_match.dart';
+import '../models/lookup_form_notice.dart';
 import '../platform/android_process_text_window.dart';
 import '../platform/android_reader_memory.dart';
 import '../platform/reader_platform_policy.dart';
@@ -396,6 +398,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   String? _articleAnchor;
   double? _articleScrollOffset;
   ({String original, String replacement})? _lookupCorrection;
+  LookupFormCandidate? _lookupRelatedForm;
+  String? _lookupOriginalQuery;
+  List<LookupFormMatch<Article>> _lookupFormOptions = const [];
+  bool _lookupOriginalHasExactResult = false;
+  bool _lookupFormOfferAccepted = false;
   bool _isSearching = false;
   bool _isImporting = false;
   bool _isScanningIosDictionaryHome = false;
@@ -441,16 +448,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   bool _macosAccessibilityGranted = false;
   WindowsScreenLookupShortcut _windowsScreenLookupShortcut =
       WindowsScreenLookupShortcut.ctrlAltL;
+  bool _shortcutRecordingActive = false;
   int _screenLookupRequest = 0;
   DictionaryContentSession? _screenLookupContentSession;
   List<DictionaryLibraryEntry> _screenLookupEntries = const [];
   String? _screenLookupScopeId;
   String? _screenLookupQuery;
+  String? _screenLookupActiveQuery;
+  bool _screenLookupFormSelectionExplicit = false;
   int _screenLookupX = 0;
   int _screenLookupY = 0;
   int _screenLookupDictionaryIndex = 0;
   bool _screenLookupPinned = false;
   Article? _screenLookupArticle;
+  LookupFormMatch<Article>? _screenLookupFormMatch;
+  bool _screenLookupFormOfferAccepted = false;
+  List<LookupFormMatch<Article>> _screenLookupFormOptions = const [];
+  String? _screenLookupSelectedFormQuery;
+  LookupFormMatch<Article>? _screenLookupAiLemmaMatch;
   AudioPlayer? _screenLookupAudioPlayer;
   Directory? _screenLookupAudioDirectory;
   int _screenLookupAudioRequest = 0;
@@ -859,11 +874,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _windowsScreenLookupSaving = true;
     });
     try {
-      await widget.windowsAppSettings.saveScreenLookupShortcut(shortcut);
       final applied = await _applyDesktopScreenLookup();
       if (!applied) {
         throw StateError('screen lookup shortcut could not be registered');
       }
+      await widget.windowsAppSettings.saveScreenLookupShortcut(shortcut);
     } catch (error) {
       if (!mounted) return;
       _windowsScreenLookupShortcut = previous;
@@ -874,6 +889,35 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (mounted) {
         setState(() => _windowsScreenLookupSaving = false);
       }
+    }
+  }
+
+  Future<bool> _setShortcutRecording(bool recording) async {
+    if (recording) {
+      if (_shortcutRecordingActive || _windowsScreenLookupSaving) return false;
+      _shortcutRecordingActive = true;
+    }
+    var succeeded = false;
+    try {
+      await _windowsScreenLookup.setShortcutRecording(recording);
+      succeeded = true;
+      return true;
+    } on MissingPluginException {
+      if (mounted) _showMessage('当前版本无法录入快捷键，请重新启动新版程序。');
+      return false;
+    } on PlatformException catch (error) {
+      if (!recording && mounted) {
+        setState(() => _windowsScreenLookupEnabled = false);
+        await widget.windowsAppSettings.saveScreenLookupEnabled(false);
+      }
+      if (mounted) {
+        _showMessage(recording
+            ? '无法暂停取词快捷键，请稍后重试。'
+            : '原快捷键无法恢复（${error.code}），请更换快捷键并重新开启屏幕取词。');
+      }
+      return false;
+    } finally {
+      if (!recording || !succeeded) _shortcutRecordingActive = false;
     }
   }
 
@@ -1118,9 +1162,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _screenLookupContentSession = null;
         _screenLookupEntries = const [];
         _screenLookupQuery = null;
+        _screenLookupActiveQuery = null;
+        _screenLookupFormSelectionExplicit = false;
         _screenLookupContext = '';
         _screenLookupAiPayload = null;
         _screenLookupArticle = null;
+        _screenLookupFormMatch = null;
+        _screenLookupFormOfferAccepted = false;
+        _screenLookupFormOptions = const [];
+        _screenLookupSelectedFormQuery = null;
+        _screenLookupAiLemmaMatch = null;
         _screenLookupPinned = false;
         unawaited(_stopScreenLookupPlayback());
         break;
@@ -1159,12 +1210,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
         break;
       case 'toggleFavorite':
-        final query = _screenLookupQuery;
+        final query = _screenLookupActiveQuery;
         if (query != null && query.isNotEmpty) {
+          final articleHtml = _screenLookupFormMatch?.candidate == null ||
+                  _screenLookupFormMatch?.candidate?.query == query
+              ? _screenLookupArticle?.html ?? ''
+              : '';
           await _wordRecordsReady;
           await _toggleFavorite(
             query,
-            articleHtml: _screenLookupArticle?.html,
+            articleHtml: articleHtml,
           );
         }
         break;
@@ -1173,6 +1228,30 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         break;
       case 'analyzeAi':
         await _analyzeCurrentScreenLookupWithAi();
+        break;
+      case 'viewRelatedHeadword':
+        final match = _screenLookupFormMatch;
+        if (match != null && match.candidate?.offerOnly == true) {
+          final index = _screenLookupFormOptions.indexWhere(
+              (form) => form.candidate?.query == match.candidate!.query);
+          if (index >= 0) await _selectScreenLookupForm(index);
+        }
+        break;
+      case 'selectLookupForm':
+        final index = arguments['index'];
+        if (index is int) await _selectScreenLookupForm(index);
+        break;
+      case 'viewAiLemma':
+        final match = _screenLookupAiLemmaMatch;
+        if (match != null) {
+          var index = _screenLookupFormOptions.indexWhere(
+              (form) => form.candidate!.query == match.candidate!.query);
+          if (index < 0) {
+            _screenLookupFormOptions = [..._screenLookupFormOptions, match];
+            index = _screenLookupFormOptions.length - 1;
+          }
+          await _selectScreenLookupForm(index);
+        }
         break;
     }
   }
@@ -1214,6 +1293,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       return;
     }
     final request = ++_screenLookupAiRequest;
+    _screenLookupAiLemmaMatch = null;
     await _publishScreenLookupAiPayload(<String, Object?>{
       'status': 'loading',
       'query': query,
@@ -1231,10 +1311,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           context != _screenLookupContext) {
         return;
       }
+      final dictionaryLemma =
+          await _validateScreenLookupAiLemma(result.lemma, query, request);
+      if (!mounted ||
+          request != _screenLookupAiRequest ||
+          query != _screenLookupQuery ||
+          context != _screenLookupContext) {
+        return;
+      }
       await _publishScreenLookupAiPayload(<String, Object?>{
         'status': 'success',
         'query': query,
         ...result.toJson(),
+        'dictionaryLemma': dictionaryLemma,
       });
     } on ScreenLookupAiException catch (error) {
       if (request != _screenLookupAiRequest) return;
@@ -1252,6 +1341,36 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
+  Future<String?> _validateScreenLookupAiLemma(
+      String value, String query, int request) async {
+    final lemma = validatedAiLemmaQuery(value, query);
+    if (lemma == null) return null;
+    final popupRequest = _screenLookupRequest;
+    final match = await resolveLookupForms<Article>(
+      query: lemma,
+      indexes: screenLookupIndexesForScope(
+          _screenLookupEntries,
+          _dictionaryGroupSnapshot.groups,
+          _screenLookupScopeId ?? DictionaryGroupScope.all),
+      lookup: _lookupScreenPopupArticles,
+      includeRelated: false,
+      isCurrent: () =>
+          mounted &&
+          request == _screenLookupAiRequest &&
+          popupRequest == _screenLookupRequest,
+    );
+    if (match == null ||
+        request != _screenLookupAiRequest ||
+        popupRequest != _screenLookupRequest) {
+      return null;
+    }
+    _screenLookupAiLemmaMatch = LookupFormMatch(
+        index: match.index,
+        values: match.values,
+        candidate: LookupFormCandidate(lemma, LookupFormKind.relatedWord));
+    return lemma;
+  }
+
   Future<void> _lookupInScreenPopup(
     WindowsScreenLookupRequest lookup,
   ) async {
@@ -1267,6 +1386,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       await _windowsScreenLookup.showLoading(lookup);
       await Future.wait<void>([_libraryReady, _wordRecordsReady]);
       if (!mounted || request != _screenLookupRequest) return;
+      var scope = _screenLookupScopeId ?? _activeDictionaryScopeId;
+      if (!DictionaryGroupScope.isSystem(scope) &&
+          !_dictionaryGroupSnapshot.groups.any((group) => group.id == scope)) {
+        scope = DictionaryGroupScope.all;
+      }
+      await _prepareEnabledDictionariesForAggregateLookup(scopeId: scope);
+      if (!mounted || request != _screenLookupRequest) return;
+      _screenLookupScopeId = scope;
       final availableEntries = screenLookupEntriesInGroupOrder(
         _allAvailableEntries,
         _dictionaryGroupSnapshot.groups,
@@ -1284,6 +1411,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       }
       _screenLookupEntries = entries;
       _screenLookupQuery = query;
+      _screenLookupActiveQuery = query;
+      _screenLookupFormSelectionExplicit = false;
+      _screenLookupFormMatch = null;
+      _screenLookupFormOfferAccepted = false;
+      _screenLookupFormOptions = const [];
+      _screenLookupSelectedFormQuery = null;
+      _screenLookupAiLemmaMatch = null;
       _screenLookupContext = lookup.context;
       _screenLookupX = lookup.x;
       _screenLookupY = lookup.y;
@@ -1334,30 +1468,120 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     required int preferredIndex,
   }) async {
     if (allowedIndexes.isEmpty) return;
-    Article? matchedArticle;
-    var matchedIndex = preferredIndex;
-    for (final index in <int>[
-      preferredIndex,
-      ...allowedIndexes.where((index) => index != preferredIndex),
-    ]) {
-      List<Article> articles;
-      try {
-        articles = await _resolveArticles(_screenLookupEntries[index], query);
-      } catch (_) {
-        articles = const [];
-      }
-      if (!mounted || request != _screenLookupRequest) return;
-      if (articles.isNotEmpty) {
-        matchedArticle = articles.first;
-        matchedIndex = index;
-        break;
-      }
-    }
+    final explicit = _screenLookupFormSelectionExplicit;
+    final selectedForm = explicit
+        ? _screenLookupFormOptions
+            .where((form) =>
+                form.candidate?.query == _screenLookupSelectedFormQuery)
+            .firstOrNull
+            ?.candidate
+        : null;
+    final resolved = await resolveLookupForms<Article>(
+      query: explicit ? _screenLookupActiveQuery ?? query : query,
+      indexes: <int>[
+        preferredIndex,
+        ...allowedIndexes.where((index) => index != preferredIndex),
+      ],
+      lookup: _lookupScreenPopupArticles,
+      isCurrent: () => mounted && request == _screenLookupRequest,
+      includeRelated: !explicit,
+    );
+    if (!mounted || request != _screenLookupRequest) return;
+    final match = selectedForm == null
+        ? resolved
+        : LookupFormMatch<Article>(
+            index: resolved?.index ?? preferredIndex,
+            values: resolved?.values ?? const [],
+            candidate: selectedForm);
+    _screenLookupFormMatch = match;
+    _screenLookupFormOfferAccepted =
+        explicit && selectedForm?.offerOnly == true;
+    final primary =
+        match?.candidate == null ? <LookupFormMatch<Article>>[] : [match!];
+    final related = await collectRelatedLookupForms<Article>(
+      query: query,
+      indexes: [
+        preferredIndex,
+        ...allowedIndexes.where((index) => index != preferredIndex)
+      ],
+      lookup: _lookupScreenPopupArticles,
+      isCurrent: () => mounted && request == _screenLookupRequest,
+      excludeQueries: {if (match?.candidate != null) match!.candidate!.query},
+      limit: 3 - primary.length,
+    );
+    if (!mounted || request != _screenLookupRequest) return;
+    _screenLookupFormOptions = [...primary, ...related];
+    _screenLookupSelectedFormQuery = match?.candidate?.query;
     await _renderScreenLookupDictionary(
       request: request,
-      dictionaryIndex: matchedIndex,
-      article: matchedArticle,
+      dictionaryIndex: match?.index ?? preferredIndex,
+      article: match?.values.firstOrNull,
     );
+  }
+
+  Future<List<Article>> _lookupScreenPopupArticles(
+      int index, String query) async {
+    try {
+      return await _resolveArticles(_screenLookupEntries[index], query);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> _selectScreenLookupForm(int index) async {
+    final original = _screenLookupQuery;
+    if (original == null ||
+        index < -1 ||
+        index >= _screenLookupFormOptions.length) {
+      return;
+    }
+    final candidate =
+        index < 0 ? null : _screenLookupFormOptions[index].candidate;
+    final request = ++_screenLookupRequest;
+    final indexes = screenLookupIndexesForScope(
+        _screenLookupEntries,
+        _dictionaryGroupSnapshot.groups,
+        _screenLookupScopeId ?? DictionaryGroupScope.all);
+    final ordered = [
+      _screenLookupDictionaryIndex,
+      ...indexes.where((i) => i != _screenLookupDictionaryIndex)
+    ].where(indexes.contains).toList();
+    final found = await resolveLookupForms<Article>(
+      query: candidate?.query ?? original,
+      indexes: ordered,
+      lookup: _lookupScreenPopupArticles,
+      isCurrent: () => mounted && request == _screenLookupRequest,
+      includeRelated: false,
+    );
+    if (!mounted || request != _screenLookupRequest) return;
+    _screenLookupSelectedFormQuery = candidate?.query;
+    _screenLookupActiveQuery = candidate?.query ?? original;
+    _screenLookupFormSelectionExplicit = true;
+    _screenLookupFormOfferAccepted = candidate?.offerOnly ?? false;
+    _screenLookupFormMatch = found == null
+        ? null
+        : LookupFormMatch(
+            index: found.index,
+            values: found.values,
+            candidate: candidate,
+          );
+    await _stopScreenLookupPlayback();
+    if (!mounted || request != _screenLookupRequest) return;
+    unawaited(_recordHistory(_screenLookupActiveQuery!));
+    await _renderScreenLookupDictionary(
+        request: request,
+        dictionaryIndex: found?.index ?? _screenLookupDictionaryIndex,
+        article: found?.values.firstOrNull);
+  }
+
+  void _invalidatePopupAiLemma() {
+    _screenLookupAiLemmaMatch = null;
+    if (_screenLookupAiPayload != null) {
+      _screenLookupAiPayload = {
+        ..._screenLookupAiPayload!,
+        'dictionaryLemma': null
+      };
+    }
   }
 
   Future<void> _selectScreenLookupScope(int scopeCode) async {
@@ -1375,6 +1599,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       scopeId = null;
     }
     if (scopeId == null || scopeId == _screenLookupScopeId) return;
+    _invalidatePopupAiLemma();
+    final request = ++_screenLookupRequest;
+    final previousPath =
+        _screenLookupDictionaryIndex < _screenLookupEntries.length
+            ? _screenLookupEntries[_screenLookupDictionaryIndex].mdxPath
+            : null;
+    await _prepareEnabledDictionariesForAggregateLookup(scopeId: scopeId);
+    if (!mounted || request != _screenLookupRequest) return;
+    _screenLookupEntries = screenLookupEntriesInGroupOrder(
+      _allAvailableEntries,
+      groups,
+    );
     final allowedIndexes = screenLookupIndexesForScope(
       _screenLookupEntries,
       groups,
@@ -1382,7 +1618,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
     if (allowedIndexes.isEmpty) return;
     _screenLookupScopeId = scopeId;
-    final request = ++_screenLookupRequest;
     _screenLookupContentSession?.close();
     _screenLookupContentSession = null;
     await _stopScreenLookupPlayback();
@@ -1390,9 +1625,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       request: request,
       query: query,
       allowedIndexes: allowedIndexes,
-      preferredIndex: allowedIndexes.contains(_screenLookupDictionaryIndex)
-          ? _screenLookupDictionaryIndex
-          : allowedIndexes.first,
+      preferredIndex: allowedIndexes.firstWhere(
+        (index) => _screenLookupEntries[index].mdxPath == previousPath,
+        orElse: () => allowedIndexes.first,
+      ),
     );
   }
 
@@ -1409,30 +1645,67 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _dictionaryGroupSnapshot.groups,
       _screenLookupScopeId ?? DictionaryGroupScope.all,
     );
+    final request = ++_screenLookupRequest;
+    var selectedIndex = index;
     if (!allowedIndexes.contains(index)) {
+      _invalidatePopupAiLemma();
+      final selectedPath = _screenLookupEntries[index].mdxPath;
       final groupId = _screenLookupEntries[index].groupId;
       _screenLookupScopeId = groupId != null &&
               _dictionaryGroupSnapshot.groups
                   .any((group) => group.id == groupId)
           ? groupId
           : DictionaryGroupScope.ungrouped;
+      await _prepareEnabledDictionariesForAggregateLookup(
+          scopeId: _screenLookupScopeId);
+      if (!mounted || request != _screenLookupRequest) return;
+      _screenLookupEntries = screenLookupEntriesInGroupOrder(
+        _allAvailableEntries,
+        _dictionaryGroupSnapshot.groups,
+      );
+      selectedIndex = _screenLookupEntries
+          .indexWhere((entry) => entry.mdxPath == selectedPath);
+      if (selectedIndex < 0) return;
+      await _stopScreenLookupPlayback();
+      if (!mounted || request != _screenLookupRequest) return;
+      await _searchScreenLookupScope(
+          request: request,
+          query: query,
+          allowedIndexes: screenLookupIndexesForScope(_screenLookupEntries,
+              _dictionaryGroupSnapshot.groups, _screenLookupScopeId!),
+          preferredIndex: selectedIndex);
+      return;
     }
-    final request = ++_screenLookupRequest;
-    _screenLookupDictionaryIndex = index;
+    _screenLookupDictionaryIndex = selectedIndex;
     _screenLookupContentSession?.close();
     _screenLookupContentSession = null;
     await _stopScreenLookupPlayback();
-    List<Article> articles;
-    try {
-      articles = await _resolveArticles(_screenLookupEntries[index], query);
-    } catch (_) {
-      articles = const [];
-    }
+    final selectedForm = _screenLookupFormOptions
+        .where(
+            (form) => form.candidate?.query == _screenLookupSelectedFormQuery)
+        .firstOrNull
+        ?.candidate;
+    final match = await resolveLookupForms<Article>(
+      query: selectedForm?.query ?? query,
+      indexes: [selectedIndex],
+      lookup: _lookupScreenPopupArticles,
+      isCurrent: () => mounted && request == _screenLookupRequest,
+      includeRelated: false,
+    );
     if (!mounted || request != _screenLookupRequest) return;
+    _screenLookupFormMatch = match == null
+        ? (selectedForm == null
+            ? null
+            : LookupFormMatch(
+                index: selectedIndex,
+                values: const <Article>[],
+                candidate: selectedForm))
+        : LookupFormMatch(
+            index: match.index, values: match.values, candidate: selectedForm);
     await _renderScreenLookupDictionary(
       request: request,
-      dictionaryIndex: index,
-      article: articles.firstOrNull,
+      dictionaryIndex: selectedIndex,
+      article: match?.values.firstOrNull,
     );
   }
 
@@ -1441,7 +1714,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     required int dictionaryIndex,
     required Article? article,
   }) async {
-    final query = _screenLookupQuery;
+    final query = _screenLookupActiveQuery;
     if (query == null ||
         dictionaryIndex < 0 ||
         dictionaryIndex >= _screenLookupEntries.length) {
@@ -1457,8 +1730,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       return;
     }
     _screenLookupDictionaryIndex = dictionaryIndex;
-    _screenLookupArticle = article;
-    final articleHtml = article?.html ??
+    final form = _screenLookupFormMatch?.candidate;
+    final offerOnly =
+        form?.offerOnly == true && !_screenLookupFormOfferAccepted;
+    _screenLookupArticle = offerOnly ? null : article;
+    final articleHtml = (offerOnly ? null : article?.html) ??
         '''<div class="lumalex-screen-empty">
           <strong>“${const HtmlEscape(HtmlEscapeMode.element).convert(query)}”</strong>
           <span>未在这本词典中找到。可以从上方切换其他词典。</span>
@@ -1477,6 +1753,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ? null
             : encodeScreenLookupAiPayload(_screenLookupAiPayload!),
         articleHtml: articleHtml,
+        formChoicesHtml: buildLookupFormChoicesHtml(_screenLookupQuery!,
+            _screenLookupFormOptions.map((match) => match.candidate!).toList(),
+            selectedQuery: _screenLookupSelectedFormQuery),
       ),
       localScriptCompatibilityEnabled: true,
       resourceBaseUrl: session.resourceBaseUri.toString(),
@@ -1488,6 +1767,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _screenLookupContentSession = session;
     await _windowsScreenLookup.showArticle(
       uri: session.articleUri,
+      query: query,
       x: _screenLookupX,
       y: _screenLookupY,
     );
@@ -1503,6 +1783,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     required bool aiAvailable,
     required String? initialAiPayload,
     required String articleHtml,
+    required String formChoicesHtml,
   }) {
     const elementEscape = HtmlEscape(HtmlEscapeMode.element);
     const attributeEscape = HtmlEscape(HtmlEscapeMode.attribute);
@@ -2004,6 +2285,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     </span>
   </div>
   $compatibilityNotice
+  $formChoicesHtml
 </div>
 <section id="lumalex-screen-ai-card" aria-live="polite">
   <div class="ai-header"><span aria-hidden="true">✦</span>
@@ -2017,6 +2299,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     <div id="lumalex-ai-english" class="ai-english"></div>
     <div id="lumalex-ai-evidence" class="ai-evidence"></div>
     <div id="lumalex-ai-note" class="ai-note"></div>
+    <button id="lumalex-ai-dictionary-lemma" type="button" hidden
+      style="all:initial !important;cursor:pointer !important;color:#087e87 !important;font:600 14px/1.5 'Segoe UI','Microsoft YaHei UI',sans-serif !important;"
+      onclick="chrome.webview.postMessage('viewAiLemma')"></button>
   </div>
 </section>
 <script>
@@ -2107,6 +2392,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     const status = document.getElementById('lumalex-ai-status');
     const result = document.getElementById('lumalex-ai-result');
     const button = document.getElementById('lumalex-screen-ai-button');
+    const dictionaryButton = document.getElementById('lumalex-ai-dictionary-lemma');
+    if (dictionaryButton) {
+      dictionaryButton.hidden = !(state && state.status === 'success' && state.dictionaryLemma);
+      dictionaryButton.style.setProperty('display', dictionaryButton.hidden ? 'none' : 'block', 'important');
+      dictionaryButton.textContent = state && state.dictionaryLemma
+        ? '查看 ' + state.dictionaryLemma + ' 词条（AI 建议）' : '';
+    }
     if (!card || !status || !result) return;
     card.classList.add('visible');
     const mode = state && state.status ? state.status : 'error';
@@ -2498,6 +2790,8 @@ $articleHtml
     String? preferredMdxPath,
     String? initialAnchor,
     double? initialScrollOffset,
+    String? relatedQuery,
+    LookupFormCandidate? relatedForm,
   }) async {
     final lookupTimer = Stopwatch()..start();
     // Allocate the request before any asynchronous dictionary restoration so
@@ -2510,9 +2804,16 @@ $articleHtml
     _indexMigrationDelay?.cancel();
     _indexMigrationDelay = null;
     final query = rawQuery.trim();
+    final effectiveQuery = relatedQuery ?? query;
     _rememberCurrentReaderPosition();
     if (query.isEmpty) {
       setState(() {
+        _lookupRelatedForm = null;
+        _lookupOriginalQuery = null;
+        _lookupFormOptions = const [];
+        _lookupOriginalHasExactResult = false;
+        _lookupFormOfferAccepted = false;
+        _lookupCorrection = null;
         _articlesByDictionary = const {};
         _readerQuery = '';
         _articleAnchor = null;
@@ -2533,6 +2834,7 @@ $articleHtml
         _suggestions = const [];
         _selectedSuggestionIndex = -1;
         _lookupCorrection = null;
+        _lookupRelatedForm = null;
         _isSearching = true;
       });
       await _prepareEnabledDictionariesForAggregateLookup();
@@ -2558,7 +2860,7 @@ $articleHtml
         : dictionaries.first.mdxPath;
     final cachedResults = <String, List<Article>>{};
     for (final entry in dictionaries) {
-      final cached = _lookupResultCache.get(entry.mdxPath, query);
+      final cached = _lookupResultCache.get(entry.mdxPath, effectiveQuery);
       if (cached != null) {
         cachedResults[entry.mdxPath] = cached;
       }
@@ -2577,6 +2879,14 @@ $articleHtml
       _suggestions = const [];
       _selectedSuggestionIndex = -1;
       _lookupCorrection = null;
+      _lookupRelatedForm = null;
+      if (relatedQuery == null) {
+        _lookupOriginalQuery = query;
+        _lookupFormOptions = const [];
+        _lookupOriginalHasExactResult = false;
+      }
+      if (relatedQuery != null) _lookupRelatedForm = relatedForm;
+      _lookupFormOfferAccepted = relatedForm?.offerOnly ?? false;
       _isSearching = cachedResults.length != dictionaries.length;
     });
 
@@ -2585,11 +2895,11 @@ $articleHtml
     ) async {
       List<Article> articles;
       try {
-        articles = await _resolveArticles(entry, query);
+        articles = await _resolveArticles(entry, effectiveQuery);
       } catch (_) {
         articles = const [];
       }
-      _lookupResultCache.put(entry.mdxPath, query, articles);
+      _lookupResultCache.put(entry.mdxPath, effectiveQuery, articles);
       resolvedResults[entry.mdxPath] = articles;
       // Publish results independently so the selected dictionary never waits
       // for every enabled source. Each newly available background result also
@@ -2646,21 +2956,66 @@ $articleHtml
     var completed = resolvedResults;
     final hasExactResult =
         completed.values.any((articles) => articles.isNotEmpty);
-    if (!hasExactResult) {
+    if (relatedQuery != null) {
+      _lookupRelatedForm = relatedForm;
+    } else {
+      _lookupOriginalHasExactResult = hasExactResult;
+    }
+    Map<String, List<Article>>? primaryFormResults;
+    if (!hasExactResult && relatedQuery == null) {
       final fallback = await _findFallbackLookup(query, dictionaries, request);
       if (!mounted || request != _lookupRequest) {
         return;
       }
       if (fallback != null) {
-        completed = fallback.results;
-        _queryController.value = TextEditingValue(
-          text: fallback.query,
-          selection: TextSelection.collapsed(offset: fallback.query.length),
-        );
-        unawaited(
-            _wordRecordsReady.then((_) => _recordHistory(fallback.query)));
-        _lookupCorrection = (original: query, replacement: fallback.query);
+        final form = fallback.form;
+        if (form != null) {
+          _lookupRelatedForm = form;
+          primaryFormResults = fallback.results;
+          if (!form.offerOnly) completed = fallback.results;
+        } else {
+          completed = fallback.results;
+          _queryController.value = TextEditingValue(
+            text: fallback.query,
+            selection: TextSelection.collapsed(offset: fallback.query.length),
+          );
+          unawaited(
+              _wordRecordsReady.then((_) => _recordHistory(fallback.query)));
+          _lookupCorrection = (original: query, replacement: fallback.query);
+        }
       }
+    }
+    if (relatedQuery == null && _lookupCorrection == null) {
+      final primaryForm = _lookupRelatedForm;
+      final primaryIndex = primaryFormResults == null
+          ? -1
+          : dictionaries.indexWhere((entry) =>
+              primaryFormResults![entry.mdxPath]?.isNotEmpty ?? false);
+      final primary = primaryIndex < 0
+          ? <LookupFormMatch<Article>>[]
+          : [
+              LookupFormMatch<Article>(
+                  index: primaryIndex,
+                  values:
+                      primaryFormResults![dictionaries[primaryIndex].mdxPath]!,
+                  candidate: primaryForm)
+            ];
+      final related = await collectRelatedLookupForms<Article>(
+        query: query,
+        indexes: List.generate(dictionaries.length, (index) => index),
+        lookup: (index, term) async {
+          try {
+            return await _resolveArticles(dictionaries[index], term);
+          } catch (_) {
+            return const [];
+          }
+        },
+        isCurrent: () => mounted && request == _lookupRequest,
+        excludeQueries: {if (primaryForm != null) primaryForm.query},
+        limit: 3 - primary.length,
+      );
+      if (!mounted || request != _lookupRequest) return;
+      _lookupFormOptions = [...primary, ...related];
     }
     var selection = preferred;
     if (completed[preferred]?.isEmpty ?? true) {
@@ -2723,20 +3078,29 @@ $articleHtml
     });
   }
 
-  Future<({String query, Map<String, List<Article>> results})?>
-      _findFallbackLookup(
+  Future<
+      ({
+        String query,
+        Map<String, List<Article>> results,
+        LookupFormCandidate? form
+      })?> _findFallbackLookup(
     String query,
     List<DictionaryLibraryEntry> dictionaries,
     int request,
   ) async {
-    final directCandidates = morphologicalFallbacks(query);
-    for (final candidate in directCandidates) {
-      final results = await _lookupAlternative(candidate, dictionaries);
+    for (final candidate in [
+      ...lookupFormCandidates(query),
+      ...phraseHeadwordCandidates(query)
+    ]) {
+      final results = await _lookupAlternative(candidate.query, dictionaries);
       if (!mounted || request != _lookupRequest) return null;
       if (results.values.any((articles) => articles.isNotEmpty)) {
-        return (query: candidate, results: results);
+        return (query: candidate.query, results: results, form: candidate);
       }
     }
+
+    // A spelling-neighbor must not silently change an -ing/-ed adjective's meaning.
+    if (isAmbiguousParticipialQuery(query)) return null;
 
     final suggestionPool = <String>[];
     for (final prefix in spellingSearchPrefixes(query)) {
@@ -2752,7 +3116,7 @@ $articleHtml
       final results = await _lookupAlternative(candidate, dictionaries);
       if (!mounted || request != _lookupRequest) return null;
       if (results.values.any((articles) => articles.isNotEmpty)) {
-        return (query: candidate, results: results);
+        return (query: candidate, results: results, form: null);
       }
     }
     return null;
@@ -3899,7 +4263,13 @@ $articleHtml
         ? _addGlossToNewReviewCard(
             synchronizedReviewCards,
             normalized,
-            articleHtml: articleHtml,
+            // A related form is not necessarily the original adjective's meaning.
+            articleHtml: articleHtml == null &&
+                    _lookupRelatedForm != null &&
+                    normalized == _readerQuery &&
+                    normalized != _lookupRelatedForm!.query
+                ? ''
+                : articleHtml,
           )
         : synchronizedReviewCards;
     _wordRecordsMutationGeneration++;
@@ -4548,12 +4918,15 @@ $articleHtml
             !_failedMdxPaths.contains(entry.mdxPath),
       );
 
-  Future<void> _prepareEnabledDictionariesForAggregateLookup() async {
+  Future<void> _prepareEnabledDictionariesForAggregateLookup(
+      {String? scopeId}) async {
     final pending = _libraryEntries
         .where(
           (entry) =>
               entry.isEnabled &&
-              _entryMatchesActiveDictionaryScope(entry) &&
+              dictionaryEntriesForScope(
+                      [entry], scopeId ?? _activeDictionaryScopeId)
+                  .isNotEmpty &&
               !_availableMdxPaths.contains(entry.mdxPath) &&
               !_failedMdxPaths.contains(entry.mdxPath),
         )
@@ -6859,6 +7232,7 @@ $articleHtml
         screenLookupEnabled: _windowsScreenLookupEnabled,
         screenLookupSaving: _windowsScreenLookupSaving,
         screenLookupShortcut: _windowsScreenLookupShortcut,
+        onShortcutRecordingChanged: _setShortcutRecording,
         onScreenLookupEnabledChanged: (enabled) {
           unawaited(_setWindowsScreenLookupEnabled(enabled));
         },
@@ -6978,6 +7352,14 @@ $articleHtml
                     if (_lookupCorrection case final correction?) ...[
                       const SizedBox(height: 6),
                       _buildCorrectionBanner(correction),
+                    ],
+                    if (_lookupRelatedForm case final form?) ...[
+                      const SizedBox(height: 6),
+                      _buildRelatedFormBanner(form),
+                    ],
+                    if (_lookupFormOptions.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      _buildLookupFormChoices(),
                     ],
                     SizedBox(height: widget.processTextMode ? 4 : 8),
                     Expanded(child: _buildBody(compact: compact)),
@@ -8136,7 +8518,14 @@ $articleHtml
       onChanged: (value) {
         _lookupCorrectionTimer?.cancel();
         _lookupCorrectionTimer = null;
-        setState(() => _lookupCorrection = null);
+        setState(() {
+          _lookupCorrection = null;
+          _lookupRelatedForm = null;
+          _lookupOriginalQuery = null;
+          _lookupFormOptions = const [];
+          _lookupOriginalHasExactResult = false;
+          _lookupFormOfferAccepted = false;
+        });
         _suggest(value);
       },
     );
@@ -8326,6 +8715,68 @@ $articleHtml
       ),
     );
   }
+
+  Widget _buildRelatedFormBanner(LookupFormCandidate form) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      key: const ValueKey('lookup-related-form-notice'),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        color: colors.secondaryContainer.withValues(alpha: 0.62),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(form.notice(_lookupOriginalQuery ?? _queryController.text.trim(),
+            originalAvailable: _lookupOriginalHasExactResult)),
+        if (form.offerOnly && !_lookupFormOfferAccepted)
+          TextButton(
+            onPressed: () => unawaited(_selectMainLookupForm(_lookupFormOptions
+                .indexWhere((match) => match.candidate?.query == form.query))),
+            child: Text('查看主词 ${form.query}'),
+          ),
+      ]),
+    );
+  }
+
+  Future<void> _selectMainLookupForm(int index) async {
+    if (_isSearching || index < -1 || index >= _lookupFormOptions.length) {
+      return;
+    }
+    final form = index < 0 ? null : _lookupFormOptions[index].candidate;
+    _lookupOriginalQuery ??= _queryController.text.trim();
+    final query = form?.query ?? _lookupOriginalQuery!;
+    _queryController.value = TextEditingValue(
+        text: query, selection: TextSelection.collapsed(offset: query.length));
+    await _lookup(query,
+        relatedQuery: query,
+        relatedForm: form,
+        preferredMdxPath: _selectedMdxPath);
+  }
+
+  Widget _buildLookupFormChoices() => Wrap(
+        key: const ValueKey('lookup-form-choices'),
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          ChoiceChip(
+              label: Text(
+                  '原词 ${_lookupOriginalQuery ?? _queryController.text.trim()}'),
+              selected: _lookupRelatedForm == null,
+              onSelected: _isSearching
+                  ? null
+                  : (_) => unawaited(_selectMainLookupForm(-1))),
+          for (var index = 0; index < _lookupFormOptions.length; index++)
+            ChoiceChip(
+                label: Text(
+                    '${_lookupFormOptions[index].candidate!.offerOnly ? '主词' : '相关原形'} ${_lookupFormOptions[index].candidate!.query}'),
+                selected: _lookupRelatedForm?.query ==
+                    _lookupFormOptions[index].candidate!.query,
+                onSelected: _isSearching
+                    ? null
+                    : (_) => unawaited(_selectMainLookupForm(index))),
+        ],
+      );
 
   Widget _buildAllDictionariesView(
     List<DictionaryLibraryEntry> entries, {
@@ -8555,7 +9006,7 @@ $articleHtml
     }
     final savedScrollOffset = _readerPositionCache.get(
       entry.mdxPath,
-      _readerQuery,
+      _readerPositionKey,
     );
     final reader = ArticlePage(
       key: readerKey ?? ValueKey('dictionary-reader-${entry.mdxPath}'),
@@ -8619,8 +9070,12 @@ $articleHtml
     final path = _selectedMdxPath;
     if (query.isEmpty || path == null) return;
     final offset = _articleControllers[path]?.lastKnownScrollOffset ?? 0;
-    _readerPositionCache.put(path, query, offset);
+    _readerPositionCache.put(path, _readerPositionKey, offset);
   }
+
+  String get _readerPositionKey => _lookupRelatedForm == null
+      ? _readerQuery
+      : '$_readerQuery\u0000${_lookupRelatedForm!.query}';
 
   List<String> _retainReaderPath(List<String> current, String? path) {
     if (path == null) return current;

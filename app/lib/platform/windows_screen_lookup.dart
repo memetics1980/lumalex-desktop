@@ -3,30 +3,111 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
-enum WindowsScreenLookupShortcut {
-  ctrlAltL('Ctrl + Alt + L'),
-  ctrlShiftL('Ctrl + Shift + L'),
-  altQ('Alt + Q');
+final class WindowsScreenLookupShortcut {
+  const WindowsScreenLookupShortcut._(
+      this.name, this.modifiers, this.virtualKey);
 
-  const WindowsScreenLookupShortcut(this.windowsLabel);
+  static const ctrlAltL = WindowsScreenLookupShortcut._('ctrlAltL', 3, 0x4c);
+  static const ctrlShiftL =
+      WindowsScreenLookupShortcut._('ctrlShiftL', 6, 0x4c);
+  static const altQ = WindowsScreenLookupShortcut._('altQ', 1, 0x51);
+  static const values = [ctrlAltL, ctrlShiftL, altQ];
 
-  final String windowsLabel;
+  // Modifier bits match Win32 MOD_ALT, MOD_CONTROL and MOD_SHIFT.
+  final String name;
+  final int modifiers;
+  final int virtualKey;
+  bool get isCustom => !values.contains(this);
+
+  static bool isValidCombination(int modifiers, int key) =>
+      modifiers > 0 &&
+      modifiers < 8 &&
+      (modifiers & 3) != 0 &&
+      !(modifiers == 2 && [0x41, 0x43, 0x56, 0x58, 0x59, 0x5a].contains(key)) &&
+      !(modifiers == 1 && key == 0x73) &&
+      ((key >= 0x30 && key <= 0x39) ||
+          (key >= 0x41 && key <= 0x5a) ||
+          (key >= 0x70 && key <= 0x7a));
+
+  factory WindowsScreenLookupShortcut.custom({
+    required int modifiers,
+    required int virtualKey,
+  }) {
+    if (!isValidCombination(modifiers, virtualKey)) {
+      throw ArgumentError('Unsupported screen lookup shortcut');
+    }
+    for (final preset in values) {
+      if (preset.modifiers == modifiers && preset.virtualKey == virtualKey) {
+        return preset;
+      }
+    }
+    return WindowsScreenLookupShortcut._(
+      'custom:$modifiers:$virtualKey',
+      modifiers,
+      virtualKey,
+    );
+  }
+
+  static int? virtualKeyFor(LogicalKeyboardKey key) {
+    if (key.keyId >= LogicalKeyboardKey.keyA.keyId &&
+        key.keyId <= LogicalKeyboardKey.keyZ.keyId) {
+      return 0x41 + key.keyId - LogicalKeyboardKey.keyA.keyId;
+    }
+    if (key.keyId >= LogicalKeyboardKey.digit0.keyId &&
+        key.keyId <= LogicalKeyboardKey.digit9.keyId) {
+      return 0x30 + key.keyId - LogicalKeyboardKey.digit0.keyId;
+    }
+    if (key.keyId >= LogicalKeyboardKey.f1.keyId &&
+        key.keyId <= LogicalKeyboardKey.f11.keyId) {
+      return 0x70 + key.keyId - LogicalKeyboardKey.f1.keyId;
+    }
+    return null;
+  }
+
+  String get windowsLabel => [
+        if ((modifiers & 2) != 0) 'Ctrl',
+        if ((modifiers & 1) != 0) 'Alt',
+        if ((modifiers & 4) != 0) 'Shift',
+        virtualKey >= 0x70
+            ? 'F${virtualKey - 0x70 + 1}'
+            : String.fromCharCode(virtualKey),
+      ].join(' + ');
   String get label => Platform.isMacOS
-      ? switch (this) {
-          ctrlAltL => '⌘ + ⌥ + L',
-          ctrlShiftL => '⌘ + ⇧ + L',
-          altQ => '⌥ + Q',
+      ? switch (name) {
+          'ctrlAltL' => '⌘ + ⌥ + L',
+          'ctrlShiftL' => '⌘ + ⇧ + L',
+          'altQ' => '⌥ + Q',
+          _ => windowsLabel,
         }
       : windowsLabel;
+
+  @override
+  bool operator ==(Object other) =>
+      other is WindowsScreenLookupShortcut && name == other.name;
+  @override
+  int get hashCode => name.hashCode;
 }
 
 WindowsScreenLookupShortcut windowsScreenLookupShortcutFromStorage(
   String? value,
-) =>
-    WindowsScreenLookupShortcut.values.firstWhere(
-      (shortcut) => shortcut.name == value,
-      orElse: () => WindowsScreenLookupShortcut.ctrlAltL,
-    );
+) {
+  for (final preset in WindowsScreenLookupShortcut.values) {
+    if (preset.name == value) return preset;
+  }
+  final match =
+      RegExp(r'^custom:([1-7]):([0-9]{2,3})$').firstMatch(value ?? '');
+  if (match != null) {
+    final modifiers = int.parse(match.group(1)!);
+    final key = int.parse(match.group(2)!);
+    if (WindowsScreenLookupShortcut.isValidCombination(modifiers, key)) {
+      return WindowsScreenLookupShortcut.custom(
+        modifiers: modifiers,
+        virtualKey: key,
+      );
+    }
+  }
+  return WindowsScreenLookupShortcut.ctrlAltL;
+}
 
 final class WindowsScreenLookupRequest {
   const WindowsScreenLookupRequest({
@@ -85,13 +166,20 @@ class WindowsScreenLookup {
         'y': request.y,
       });
 
+  Future<void> setShortcutRecording(bool recording) =>
+      _channel.invokeMethod<void>('setShortcutRecording', <String, Object>{
+        'recording': recording,
+      });
+
   Future<void> showArticle({
     required Uri uri,
+    String? query,
     required int x,
     required int y,
   }) =>
       _channel.invokeMethod<void>('showArticle', <String, Object>{
         'uri': uri.toString(),
+        if (query != null) 'query': query,
         'x': x,
         'y': y,
       });

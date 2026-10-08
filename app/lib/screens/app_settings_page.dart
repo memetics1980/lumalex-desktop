@@ -5,6 +5,7 @@ import 'dart:io';
 import '../platform/desktop_platform.dart';
 import '../platform/windows_screen_lookup.dart';
 import '../services/windows_app_settings.dart';
+import 'screen_lookup_shortcut_dialog.dart';
 
 class AppSettingsPage extends StatelessWidget {
   const AppSettingsPage({
@@ -35,6 +36,7 @@ class AppSettingsPage extends StatelessWidget {
     this.onOpenMacosAccessibilitySettings,
     this.onRefreshMacosAccessibilityPermission,
     this.onShowCurrentMacosApplication,
+    this.onShortcutRecordingChanged,
     super.key,
   });
 
@@ -42,6 +44,7 @@ class AppSettingsPage extends StatelessWidget {
   final VoidCallback? onOpenMacosAccessibilitySettings;
   final VoidCallback? onRefreshMacosAccessibilityPermission;
   final VoidCallback? onShowCurrentMacosApplication;
+  final Future<bool> Function(bool recording)? onShortcutRecordingChanged;
   final WindowsCloseBehavior closeBehavior;
   final bool closeBehaviorSaving;
   final ValueChanged<WindowsCloseBehavior> onCloseBehaviorChanged;
@@ -65,6 +68,28 @@ class AppSettingsPage extends StatelessWidget {
   final VoidCallback onExportLearningData;
   final VoidCallback onImportLearningData;
   final VoidCallback onSaveDiagnostics;
+
+  Future<void> _editShortcut(BuildContext context) async {
+    final recordingChanged = onShortcutRecordingChanged;
+    if (screenLookupSaving || recordingChanged == null) return;
+    if (!await recordingChanged(true)) return;
+    WindowsScreenLookupShortcut? shortcut;
+    var resumed = false;
+    try {
+      if (context.mounted) {
+        shortcut = await showDialog<WindowsScreenLookupShortcut>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const ScreenLookupShortcutDialog(),
+        );
+      }
+    } finally {
+      resumed = await recordingChanged(false);
+    }
+    if (context.mounted && resumed && shortcut != null) {
+      onScreenLookupShortcutChanged(shortcut);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -375,15 +400,26 @@ class AppSettingsPage extends StatelessWidget {
                           'windows-screen-lookup-shortcut',
                         ),
                         initialValue: screenLookupShortcut,
+                        isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: '取词快捷键',
                           border: OutlineInputBorder(),
                         ),
-                        items: WindowsScreenLookupShortcut.values
+                        items: [
+                          ...WindowsScreenLookupShortcut.values,
+                          if (screenLookupShortcut.isCustom)
+                            screenLookupShortcut,
+                        ]
                             .map(
                               (shortcut) => DropdownMenuItem(
                                 value: shortcut,
-                                child: Text(shortcut.label),
+                                child: Text(
+                                  shortcut.isCustom
+                                      ? '${shortcut.label}（自定义）'
+                                      : shortcut.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             )
                             .toList(growable: false),
@@ -396,6 +432,20 @@ class AppSettingsPage extends StatelessWidget {
                               },
                       ),
                     ),
+                    if (Platform.isWindows &&
+                        onShortcutRecordingChanged != null) ...[
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        key: const ValueKey('custom-screen-lookup-shortcut'),
+                        onPressed: screenLookupSaving
+                            ? null
+                            : () => _editShortcut(context),
+                        icon: const Icon(Icons.keyboard_outlined),
+                        label: Text(screenLookupShortcut.isCustom
+                            ? '修改自定义快捷键'
+                            : '自定义快捷键…'),
+                      ),
+                    ],
                     if (!screenLookupEnabled) ...[
                       const SizedBox(height: 8),
                       Text(

@@ -1,17 +1,74 @@
 import 'dart:math';
 
-const _irregularForms = <String, String>{
-  'am': 'be',
-  'are': 'be',
-  'was': 'be',
-  'were': 'be',
-  'been': 'be',
+const _irregularVerbForms = <String, String>{
+  'being': 'be',
+  'lying': 'lie',
+  'dying': 'die',
+  'tying': 'tie',
+  'became': 'become',
+  'began': 'begin',
+  'begun': 'begin',
+  'broke': 'break',
+  'broken': 'break',
+  'brought': 'bring',
+  'bought': 'buy',
+  'caught': 'catch',
+  'came': 'come',
+  'chosen': 'choose',
+  'chose': 'choose',
+  'fell': 'fall',
+  'fallen': 'fall',
+  'felt': 'feel',
+  'found': 'find',
+  'flew': 'fly',
+  'flown': 'fly',
+  'gave': 'give',
+  'given': 'give',
+  'got': 'get',
+  'gotten': 'get',
+  'grew': 'grow',
+  'grown': 'grow',
+  'kept': 'keep',
+  'knew': 'know',
+  'known': 'know',
+  'left': 'leave',
+  'lost': 'lose',
+  'made': 'make',
+  'met': 'meet',
+  'paid': 'pay',
+  'ran': 'run',
+  'said': 'say',
+  'saw': 'see',
+  'seen': 'see',
+  'sent': 'send',
+  'sat': 'sit',
+  'sold': 'sell',
+  'spoke': 'speak',
+  'spoken': 'speak',
+  'stood': 'stand',
+  'took': 'take',
+  'taken': 'take',
+  'told': 'tell',
+  'thought': 'think',
+  'threw': 'throw',
+  'thrown': 'throw',
+  'wrote': 'write',
+  'written': 'write',
   'went': 'go',
   'gone': 'go',
   'did': 'do',
   'done': 'do',
   'had': 'have',
   'has': 'have',
+  'was': 'be',
+  'were': 'be',
+  'been': 'be',
+};
+
+const _irregularForms = <String, String>{
+  ..._irregularVerbForms,
+  'am': 'be',
+  'are': 'be',
   'children': 'child',
   'men': 'man',
   'women': 'woman',
@@ -82,6 +139,123 @@ List<String> morphologicalFallbacks(String rawQuery) {
     add(word.substring(0, word.length - 1));
   }
   return candidates;
+}
+
+enum LookupFormKind { relatedWord, phraseBase, phraseHeadword }
+
+final class LookupFormCandidate {
+  const LookupFormCandidate(this.query, this.kind);
+  final String query;
+  final LookupFormKind kind;
+
+  bool get offerOnly => kind == LookupFormKind.phraseHeadword;
+  String notice(String original, {bool originalAvailable = false}) =>
+      originalAvailable
+          ? '原选词“$original”；正在查看相关原形“$query”。请结合原句判断词性和含义。'
+          : switch (kind) {
+              LookupFormKind.phraseBase =>
+                '原文“$original”未收录，已按原形候选“$query”查找；不代表本句词性或含义。',
+              LookupFormKind.relatedWord =>
+                '原文“$original”未收录，以下为相关词形“$query”；不代表本句词性或含义。',
+              LookupFormKind.phraseHeadword =>
+                '未找到短语“$original”的独立词条。主词候选“$query”不等同于短语释义。',
+            };
+}
+
+const _phraseParticles = {
+  'up',
+  'down',
+  'out',
+  'in',
+  'on',
+  'off',
+  'over',
+  'away',
+  'back',
+  'through',
+  'around',
+  'apart',
+  'across',
+  'along',
+  'about',
+  'into',
+  'for',
+  'after',
+  'under',
+  'with',
+  'of',
+  'to',
+  'at',
+  'by',
+  'from',
+};
+
+List<String>? _lookupPhraseWords(String query) {
+  final normalized = query.trim().toLowerCase();
+  if (normalized.length > 64 ||
+      !RegExp(r'^[a-z]+(?:\s+[a-z]+){1,3}$').hasMatch(normalized)) {
+    return null;
+  }
+  final words = normalized.split(RegExp(r'\s+'));
+  if (!words.skip(1).every(_phraseParticles.contains)) return null;
+  return words;
+}
+
+/// Guesses only; every candidate must be validated against a real headword.
+List<LookupFormCandidate> lookupFormCandidates(String query) {
+  final words = _lookupPhraseWords(query);
+  if (words != null) {
+    final first = words.first;
+    final irregular = _irregularVerbForms[first];
+    final forms = irregular != null
+        ? [irregular]
+        : (_irregularForms.containsKey(first)
+            ? <String>[]
+            : morphologicalFallbacks(first)
+                .where((candidate) =>
+                    first.endsWith('ed') ||
+                    first.endsWith('ing') ||
+                    first.endsWith('s'))
+                .toList());
+    return forms
+        .take(4)
+        .map((form) => LookupFormCandidate(
+              '$form ${words.skip(1).join(' ')}',
+              LookupFormKind.phraseBase,
+            ))
+        .toList(growable: false);
+  }
+  return morphologicalFallbacks(query)
+      .take(6)
+      .map((form) => LookupFormCandidate(form, LookupFormKind.relatedWord))
+      .toList(growable: false);
+}
+
+List<LookupFormCandidate> phraseHeadwordCandidates(String query) {
+  final words = _lookupPhraseWords(query);
+  if (words == null) return const [];
+  final forms = <String>{
+    words.first,
+    ...lookupFormCandidates(query).map((form) => form.query.split(' ').first)
+  };
+  return forms
+      .take(5)
+      .map((form) => LookupFormCandidate(form, LookupFormKind.phraseHeadword))
+      .toList(growable: false);
+}
+
+bool isAmbiguousParticipialQuery(String query) =>
+    RegExp(r'^[a-z]{3,}(?:ing|ed)$').hasMatch(query.trim().toLowerCase());
+
+String? validatedAiLemmaQuery(String value, String original) {
+  final query = value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  if (query == original.trim().toLowerCase() ||
+      query.length > 64 ||
+      !RegExp(r"^[a-z]+(?:['’-][a-z]+)*(?: [a-z]+(?:['’-][a-z]+)*){0,3}$")
+          .hasMatch(query)) {
+    return null;
+  }
+  return query;
 }
 
 List<String> spellingSearchPrefixes(String rawQuery) {

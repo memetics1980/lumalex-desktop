@@ -29,7 +29,17 @@ Do not move, rename or delete the source files after import. Initial import or s
 
 ## 2. Main-window lookup and dictionary groups
 
-Enter a word on the lookup page (查词) and submit it. If an exact match is missing, the app may try inflections or nearby spellings and indicate which word it actually displays.
+Enter a word or phrase on the lookup page (查词) and submit it. The original query is tried across the current scope before any related form. If it is absent, a bounded local fallback preserves the original text and shows a persistent explanation: for example, `coughed up` may match `cough up`. An existing `exciting` entry takes priority; `-ing` and `-ed` alone do not determine part of speech. If only `excite` is found, it is labeled as a related form, not a claim about the original word's meaning in context.
+
+Even when the original has its own entry, locally verified related forms appear as optional buttons in both the main window and the popup. For example, `suckling` keeps its noun entry by default while offering `suckle`; switch only by clicking Original (原词) or Related base form (相关原形). Candidates must exist in the current dictionary scope. Rules alone cannot determine the meaning used in the sentence.
+
+The popup shows only form-switching buttons and a brief hint. The longer original-selection/related-form explanation is removed entirely, rather than retained in a collapsible section, to preserve reading space.
+
+Explicitly choosing a form also changes the current query. Switching from `suckling` to `suckle` updates the popup title or main search field; favorites save `suckle` and its displayed entry's gloss, and Open main window also queries `suckle`. Click Original to switch back. Each form has its own favorite status. Merely offering an automatic related-form fallback, before an explicit choice, still preserves the original query.
+
+For contextual disambiguation, explicitly request AI in a popup that has nearby context. If AI suggests a different lemma and an exact entry exists within the current scope, a View entry (AI suggestion) button appears. AI never automatically switches the dictionary entry or sends a request during ordinary lookup. Form switching preserves the original selection and sentence as AI context, while favorites use the currently chosen query.
+
+When a phrase has no independent entry but a headword candidate exists, View headword (查看主词) displays its definition and changes the current query to that headword only after a click; a word definition is not a phrase definition. Spelling corrections remain labeled. Morphological fallback runs offline without automatically calling AI. Popup AI receives the original selection and sentence.
 
 [![Main lookup page](images/main-lookup.png)](images/main-lookup.png)
 
@@ -71,7 +81,9 @@ Entry-history navigation is different from switching dictionaries. Shortcut hand
 3. Leave LumaLex running and select a word or phrase in another application.
 4. Press the shortcut to open the lookup popup near the pointer.
 
-If the shortcut is occupied, turn lookup off, choose another offered shortcut, and enable it again. Fully exiting LumaLex disables global lookup. To keep it running in the background, select the hide-to-tray close behavior.
+On Windows, click Custom shortcut (自定义快捷键…), press a combination in the recording area, then select Use this shortcut (使用此快捷键). Use Ctrl or Alt with a letter, digit or F1–F11, optionally adding Shift. Win, F12, unmodified keys and common copy/paste/editing combinations are excluded. Global lookup pauses while recording and resumes on cancellation. Saved shortcuts persist across restarts. macOS currently retains the three presets.
+
+When lookup is enabled, changing the shortcut checks availability and preserves the original on a conflict. When lookup is disabled, you may save first; availability is checked when enabling it. Fully exiting LumaLex disables global lookup. To keep it running in the background, select the hide-to-tray close behavior.
 
 ### Popup controls
 

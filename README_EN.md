@@ -10,14 +10,14 @@ LumaLex is a desktop MDX/MDD dictionary reader built with Flutter and Rust. This
 
 | Platform | Download and status |
 | --- | --- |
-| Windows 10/11 x64 | [Windows portable build 88](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88-windows); extract the entire archive |
+| Windows 10/11 x64 | [Windows portable build 94](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94-windows); extract the entire archive |
 | macOS 12+ | [macOS preview build 88](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88); DMG and ZIP available |
 
 The macOS package is Universal (Apple Silicon / Intel). It has been tested on Apple Silicon; Intel hardware has not yet been tested. This preview is ad-hoc signed, without Developer ID signing or Apple notarization, so first launch may require confirmation in System Settings. Both hosts share settings, dictionary navigation and popup content. macOS supports menu-bar persistence, global lookup shortcuts, accessibility-based selection/context capture, Keychain and contextual AI. Capture depends on the source app. Screenshots below show Windows.
 
 LumaLex does not bundle or distribute commercial dictionaries. Once you import your own dictionaries, ordinary lookup works offline. Contextual AI explanations are optional, require separate configuration, and run only on request.
 
-[Download Windows portable edition](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88-windows) · [Download macOS preview](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88) · [macOS installation and use](docs/MACOS_GUIDE.en.md) · [User guide](docs/USER_GUIDE.en.md) · [中文使用说明](docs/USER_GUIDE.zh-CN.md) · [Windows build guide](app/windows/README.md)
+[Download Windows portable edition](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94-windows) · [Download macOS preview](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88) · [macOS installation and use](docs/MACOS_GUIDE.en.md) · [User guide](docs/USER_GUIDE.en.md) · [中文使用说明](docs/USER_GUIDE.zh-CN.md) · [Windows build guide](app/windows/README.md)
 
 Click a screenshot to view the full-resolution original. Dictionaries and reading materials shown are examples and are not bundled with the app; AI output is an example, not a guaranteed answer.
 
@@ -45,6 +45,7 @@ Select a word or phrase in another application and press the lookup shortcut to 
 - Headword and example audio when the imported dictionary includes the corresponding resources.
 - A star button that saves words to the main application's favorites.
 - A main-window button to continue the current lookup in the full interface.
+- Click to switch between the original word and verified related forms. Explicit switching updates the current query, favorite target and main-window handoff, while AI retains the original word and sentence as context.
 - Mouse or touch dragging from the empty top area so the popup need not cover the source text.
 - Automatic closing or persistent display: it stays open while the pointer is inside and closes five seconds after it leaves. Persistent mode disables automatic closing, and an active AI request also pauses it.
 
@@ -83,7 +84,7 @@ Word document example: AI interprets “human touch” as a personal or human qu
 1. Extract the complete portable Windows package into a writable folder and run `LumaLex.exe`. Keep the DLLs and `data` directory beside it.
 2. Open the dictionary page and import a folder containing your MDX files and matching MDD resources.
 3. Enter a word on the lookup page, choose the lookup scope, and switch dictionaries to compare entries.
-4. Enable global screen lookup in Settings. The default shortcut is `Ctrl + Alt + L`; choose another offered combination if it conflicts.
+4. Enable global screen lookup in Settings. The default shortcut is `Ctrl + Alt + L`; choose another offered combination or record a custom Windows shortcut if it conflicts.
 5. For AI, configure the compatible API base URL, model ID and API key in Settings, save them and test the connection. Open a popup from selected text and explicitly click its AI button.
 
 See the [user guide](docs/USER_GUIDE.en.md) for configuration, popup controls, PDF limitations and troubleshooting. English documentation does not change or translate the application's current UI labels; the guide includes Chinese labels where useful.

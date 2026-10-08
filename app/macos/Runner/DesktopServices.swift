@@ -205,6 +205,9 @@ final class DesktopServices: NSObject, NSWindowDelegate, NSMenuItemValidation {
         guard let raw = args["uri"] as? String, let url = URL(string: raw), LookupPanel.isLocalDictionaryURL(url) else {
           throw DesktopServiceError.message("invalid_origin", "词条地址必须来自本地词典服务。")
         }
+        if let query = args["query"] as? String, !query.isEmpty, query.count <= 128 {
+          popup.query = query
+        }
         popup.showArticle(url, anchor: anchor)
         result(nil)
       case "showMessage":
@@ -669,6 +672,8 @@ final class LookupPanel: NSObject, WKScriptMessageHandler, WKNavigationDelegate,
       let text = query; hide(); emit("openInMain", ["text": text])
     case "pin": pinned.toggle(); lastOutside = nil; emit("pinChanged", ["pinned": pinned])
     case "toggleFavorite": emit("toggleFavorite", nil)
+    case "viewRelatedHeadword": emit("viewRelatedHeadword", nil)
+    case "viewAiLemma": emit("viewAiLemma", nil)
     case "analyzeAi": waitingForAI = true; lastOutside = nil; emit("analyzeAi", nil)
     case "interact", "pointer:inside", "pointer:outside": lastOutside = nil
     case "drag:start": dragOrigin = panel.frame.origin
@@ -676,6 +681,8 @@ final class LookupPanel: NSObject, WKScriptMessageHandler, WKNavigationDelegate,
     default:
       if action.hasPrefix("dictionary:"), let index = Int(action.dropFirst(11)), index >= 0 {
         emit("selectDictionary", ["index": index])
+      } else if action.hasPrefix("lookupForm:"), let index = Int(action.dropFirst(11)), index >= -1, index <= 7 {
+        emit("selectLookupForm", ["index": index])
       } else if action.hasPrefix("scope:"), let code = Int(action.dropFirst(6)), code >= -2 {
         emit("selectDictionaryScope", ["scopeCode": code])
       } else if action.hasPrefix("playSound:") { emit("playSound", ["value": String(action.dropFirst(10))])

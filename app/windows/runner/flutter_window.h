@@ -35,6 +35,7 @@ class FlutterWindow : public Win32Window {
   void RegisterScreenLookupChannel();
   bool ConfigureScreenLookup(bool enabled, const std::string& shortcut,
                              std::string* error);
+  bool SetShortcutRecording(bool recording, std::string* error);
   void HandleScreenLookupResult(ScreenLookupResult* raw_result);
   void NotifyScreenLookupAction(const std::string& action);
   bool AddTrayIcon();
@@ -68,6 +69,10 @@ class FlutterWindow : public Win32Window {
   bool hide_to_tray_on_close_ = false;
   bool screen_lookup_enabled_ = false;
   bool screen_lookup_hotkey_registered_ = false;
+  int screen_lookup_hotkey_id_ = 2;
+  UINT screen_lookup_hotkey_modifiers_ = 0;
+  UINT screen_lookup_hotkey_key_ = 0;
+  bool screen_lookup_shortcut_recording_ = false;
   bool show_first_hide_notification_ = false;
   bool force_exit_ = false;
   std::wstring current_screen_lookup_query_;

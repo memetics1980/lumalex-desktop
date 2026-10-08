@@ -466,7 +466,8 @@ void ScreenLookupPopup::HandleWebMessage(const std::wstring& message) {
     if (action_handler_) {
       action_handler_("analyzeAi");
     }
-  } else if (message == L"toggleFavorite" ||
+  } else if (message == L"toggleFavorite" || message == L"viewRelatedHeadword" ||
+             message == L"viewAiLemma" || message.rfind(L"lookupForm:", 0) == 0 ||
              message.rfind(L"dictionary:", 0) == 0 ||
              message.rfind(L"scope:", 0) == 0 ||
              message.rfind(L"playSound:", 0) == 0 ||

@@ -1,10 +1,92 @@
+import Carbon
 import Cocoa
 import ApplicationServices
 import FlutterMacOS
 import XCTest
+import WebKit
 @testable import LumaLex
 
 final class RunnerTests: XCTestCase {
+  func testShortcutRecordingUnregistersAndRestoresTheGlobalHotkey() throws {
+    let messenger = TestMessenger()
+    let window = MainFlutterWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
+    window.isReleasedWhenClosed = false
+    window.installDesktopServices(messenger: messenger)
+    defer {
+      messenger.call("local_dictionary/macos_screen_lookup", method: "configure", arguments: ["enabled": false, "shortcut": "custom:7:57"])
+      window.desktopServices!.prepareForTermination()
+      window.close()
+    }
+    messenger.call("local_dictionary/macos_screen_lookup", method: "configure", arguments: ["enabled": true, "shortcut": "custom:7:57"])
+    guard window.desktopServices!.hasRegisteredLookupShortcut else { throw XCTSkip("Fixture shortcut is occupied by another app.") }
+    messenger.call("local_dictionary/macos_screen_lookup", method: "setShortcutRecording", arguments: ["recording": true])
+    XCTAssertFalse(window.desktopServices!.hasRegisteredLookupShortcut)
+    messenger.call("local_dictionary/macos_screen_lookup", method: "setShortcutRecording", arguments: ["recording": false])
+    XCTAssertTrue(window.desktopServices!.hasRegisteredLookupShortcut)
+  }
+
+  func testMacReaderSelectionAndDoubleClickInsideAWebKitFrame() throws {
+    // Exercise the production script in WebKit without commercial dictionaries.
+    let appDirectory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+      .deletingLastPathComponent().deletingLastPathComponent()
+    let dart = try String(contentsOf: appDirectory.appendingPathComponent("lib/platform/macos_reader_interactions.dart"), encoding: .utf8)
+    let script = String(dart.components(separatedBy: "=> r'''\n")[1].components(separatedBy: "\n''';")[0])
+    let configuration = WKWebViewConfiguration()
+    configuration.userContentController.addUserScript(WKUserScript(source: script,
+      injectionTime: .atDocumentStart, forMainFrameOnly: false))
+    configuration.userContentController.addUserScript(WKUserScript(source: "window.__menuCalls=[]; window.flutter_inappwebview={callHandler:function(){window.__menuCalls.push(Array.from(arguments));}};",
+      injectionTime: .atDocumentStart, forMainFrameOnly: true))
+    let web = WKWebView(frame: NSRect(x: 0, y: 0, width: 500, height: 300), configuration: configuration)
+    let navigation = ReaderFixtureNavigation()
+    web.navigationDelegate = navigation
+    web.loadHTMLString("<iframe data-token='original-fixture' srcdoc='<p id=word>We walked through the forest.</p>'></iframe>",
+                       baseURL: URL(string: "http://127.0.0.1:43210/dictionary/fixture/article"))
+    let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in !web.isLoading }, object: nil)
+    XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 5), .completed)
+    let menu = expectation(description: "custom context menu")
+    web.evaluateJavaScript("""
+      (() => {
+        const frame=document.querySelector('iframe'), doc=frame.contentDocument, node=doc.getElementById('word').firstChild;
+        const range=doc.createRange(); range.setStart(node,22); range.setEnd(node,28);
+        const selection=doc.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+        const event=new frame.contentWindow.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:20,clientY:10});
+        doc.getElementById('word').dispatchEvent(event);
+        return {prevented:event.defaultPrevented,calls:window.__menuCalls};
+      })()
+      """) { result, error in
+        XCTAssertNil(error)
+        let result = result as? [String: Any]
+        XCTAssertEqual(result?["prevented"] as? Bool, true)
+        let calls = result?["calls"] as? [[Any]]
+        XCTAssertEqual(calls?.first?[0] as? String, "dictionaryWindowsSelectionMenuRequested")
+        XCTAssertEqual(calls?.first?[1] as? String, "forest")
+        menu.fulfill()
+      }
+    wait(for: [menu], timeout: 5)
+    let lookup = expectation(description: "double-click lookup navigation")
+    navigation.onLookup = { url in
+      let params = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
+      XCTAssertEqual(params?.first(where: { $0.name == "text" })?.value, "forest")
+      XCTAssertEqual(params?.first(where: { $0.name == "token" })?.value, "original-fixture")
+      lookup.fulfill()
+    }
+    web.evaluateJavaScript("const f=document.querySelector('iframe');f.contentDocument.getElementById('word').dispatchEvent(new f.contentWindow.MouseEvent('dblclick',{bubbles:true,cancelable:true}));")
+    wait(for: [lookup], timeout: 5)
+  }
+
+  func testCustomShortcutMapsSharedKeysToCarbonHardwareCodes() {
+    let letter = DesktopLookupShortcut.parse("custom:3:75")!
+    XCTAssertEqual(letter.key, UInt32(kVK_ANSI_K))
+    XCTAssertEqual(letter.modifiers, UInt32(cmdKey | optionKey))
+    XCTAssertEqual(DesktopLookupShortcut.parse("custom:7:121")?.key, UInt32(kVK_F10))
+    XCTAssertEqual(DesktopLookupShortcut.parse("custom:1:52")?.key, UInt32(kVK_ANSI_4))
+    XCTAssertEqual(DesktopLookupShortcut.parse("ctrlShiftL")?.modifiers, UInt32(cmdKey | shiftKey))
+    for invalid in ["custom:0:75", "custom:4:75", "custom:8:75", "custom:3:123", "custom:2:67", "custom:1:115", "custom:3:999", "custom:3:75oops"] {
+      XCTAssertNil(DesktopLookupShortcut.parse(invalid), invalid)
+    }
+  }
+
   func testContextIncludesSelectionAndStaysBounded() {
     let text = String(repeating: "before ", count: 100) + "forest" + String(repeating: " after", count: 100)
     let selected = (text as NSString).range(of: "forest")
@@ -86,18 +168,22 @@ final class RunnerTests: XCTestCase {
   func testPopupBridgeDeliversActionsAndClearsPendingAIOnClose() {
     let selected = expectation(description: "dictionary selected")
     let analyzed = expectation(description: "AI requested")
+    let forms = expectation(description: "word form switches")
+    forms.expectedFulfillmentCount = 4
     var closeCount = 0
     let panel = LookupPanel { event, args in
       if event == "selectDictionary", args?["index"] as? Int == 2 { selected.fulfill() }
       if event == "analyzeAi" { analyzed.fulfill() }
+      if event == "selectLookupForm", [-1, 0].contains(args?["index"] as? Int ?? -99) { forms.fulfill() }
+      if event == "viewRelatedHeadword" || event == "viewAiLemma" { forms.fulfill() }
       if event == "screenLookupClosed" { closeCount += 1 }
     }
     panel.showStatus(title: "forest", message: "Original local test text", anchor: NSEvent.mouseLocation)
     defer { panel.hide() }
     let loaded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in !panel.webView.isLoading }, object: nil)
     XCTAssertEqual(XCTWaiter.wait(for: [loaded], timeout: 5), .completed)
-    panel.webView.evaluateJavaScript("chrome.webview.postMessage('dictionary:2'); chrome.webview.postMessage('analyzeAi');")
-    wait(for: [selected, analyzed], timeout: 5)
+    panel.webView.evaluateJavaScript("chrome.webview.postMessage('dictionary:2'); chrome.webview.postMessage('analyzeAi'); chrome.webview.postMessage('lookupForm:0'); chrome.webview.postMessage('lookupForm:-1'); chrome.webview.postMessage('viewRelatedHeadword'); chrome.webview.postMessage('viewAiLemma');")
+    wait(for: [selected, analyzed, forms], timeout: 5)
     XCTAssertTrue(panel.waitingForAI)
     panel.hide()
     panel.hide()
@@ -165,6 +251,17 @@ final class RunnerTests: XCTestCase {
 }
 
 private final class ReplacementWindowDelegate: NSObject, NSWindowDelegate {}
+
+private final class ReaderFixtureNavigation: NSObject, WKNavigationDelegate {
+  var onLookup: ((URL) -> Void)?
+  func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
+               decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+    if let url = action.request.url, url.path == "/__lumalex_selection_lookup__" {
+      onLookup?(url)
+      decisionHandler(.cancel)
+    } else { decisionHandler(.allow) }
+  }
+}
 
 private final class TestMessenger: NSObject, FlutterBinaryMessenger {
   var handlers: [String: FlutterBinaryMessageHandler] = [:]

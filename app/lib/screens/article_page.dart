@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -9,6 +10,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../models/article.dart';
 import '../platform/desktop_platform.dart';
+import '../platform/macos_reader_interactions.dart';
 import '../platform/reader_platform_policy.dart';
 import '../services/dictionary_content_server.dart';
 import '../services/dictionary_engine.dart';
@@ -306,6 +308,15 @@ class _ArticlePageState extends State<ArticlePage>
           key: _readerSurfaceKey,
           ignoring: !widget.interactionEnabled,
           child: InAppWebView(
+            initialUserScripts: Platform.isMacOS
+                ? UnmodifiableListView([
+                    UserScript(
+                      source: macosReaderInteractionJavascript(),
+                      injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+                      forMainFrameOnly: false,
+                    ),
+                  ])
+                : null,
             // The reader is deliberately one long-lived WebView. Changing the
             // selected dictionary swaps its local document in didUpdateWidget
             // instead of tearing down Chromium and its resource cache.

@@ -112,8 +112,10 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(speech, null);
   });
-  const channel = MethodChannel('local_dictionary/windows_screen_lookup');
-  const lifecycle = MethodChannel('local_dictionary/windows_window_lifecycle');
+  final channel = MethodChannel(
+      'local_dictionary/${Platform.isMacOS ? 'macos' : 'windows'}_screen_lookup');
+  final lifecycle = MethodChannel(
+      'local_dictionary/${Platform.isMacOS ? 'macos' : 'windows'}_window_lifecycle');
 
   Future<void> emit(WidgetTester tester, String event,
       [Map<String, Object>? arguments]) async {
@@ -426,7 +428,7 @@ void main() {
       }
       await emit(tester, 'screenLookupClosed');
       await tester.pumpWidget(const SizedBox.shrink());
-    }, skip: !Platform.isWindows);
+    }, skip: !(Platform.isWindows || Platform.isMacOS));
   }
 
   testWidgets('main form switching updates query, favorites and saved gloss',
@@ -494,7 +496,7 @@ void main() {
             .gloss,
         'NOUN_DEFINITION');
     await tester.pumpWidget(const SizedBox.shrink());
-  }, skip: !Platform.isWindows);
+  }, skip: !(Platform.isWindows || Platform.isMacOS));
 
   testWidgets(
       'main window retains original query and persistent related-form notice',
@@ -539,5 +541,5 @@ void main() {
     expect(find.byKey(const ValueKey('lookup-related-form-notice')),
         findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
-  }, skip: !Platform.isWindows);
+  }, skip: !(Platform.isWindows || Platform.isMacOS));
 }

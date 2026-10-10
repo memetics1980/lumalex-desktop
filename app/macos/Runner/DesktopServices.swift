@@ -14,6 +14,8 @@ final class DesktopServices: NSObject, NSWindowDelegate, NSMenuItemValidation {
   private var hotKey: EventHotKeyRef?
   private var hotKeyHandler: EventHandlerRef?
   private var shortcut = "ctrlAltL"
+  private var shortcutRecording = false
+  var hasRegisteredLookupShortcut: Bool { hotKey != nil }
   private var lookupEnabled = false
   private var hideOnClose = false
   private var terminating = false
@@ -151,19 +153,16 @@ final class DesktopServices: NSObject, NSWindowDelegate, NSMenuItemValidation {
   }
 
   private func configure(enabled: Bool, shortcut newShortcut: String) throws {
-    guard ["ctrlAltL", "ctrlShiftL", "altQ"].contains(newShortcut) else {
+    guard let combination = DesktopLookupShortcut.parse(newShortcut) else {
       throw DesktopServiceError.message("invalid_shortcut", "不支持此取词快捷键。")
     }
     if enabled && hotKeyHandler == nil {
       throw DesktopServiceError.message("hotkey_handler_unavailable", "无法初始化系统快捷键服务。")
     }
-    if enabled && (!lookupEnabled || newShortcut != shortcut) {
-      let key = UInt32(newShortcut == "altQ" ? kVK_ANSI_Q : kVK_ANSI_L)
-      let modifiers = UInt32(newShortcut == "altQ" ? optionKey :
-        newShortcut == "ctrlShiftL" ? cmdKey | shiftKey : cmdKey | optionKey)
+    if enabled && !shortcutRecording && (hotKey == nil || !lookupEnabled || newShortcut != shortcut) {
       var candidate: EventHotKeyRef?
       let id = EventHotKeyID(signature: OSType(0x4C554D41), id: 1)
-      let status = RegisterEventHotKey(key, modifiers, id, GetApplicationEventTarget(), 0, &candidate)
+      let status = RegisterEventHotKey(combination.key, combination.modifiers, id, GetApplicationEventTarget(), 0, &candidate)
       guard status == noErr, let candidate = candidate else {
         throw DesktopServiceError.message("hotkey_unavailable", "快捷键已被占用，请选择其他组合。")
       }
@@ -186,6 +185,17 @@ final class DesktopServices: NSObject, NSWindowDelegate, NSMenuItemValidation {
       switch call.method {
       case "configure":
         try configure(enabled: args["enabled"] as? Bool ?? false, shortcut: args["shortcut"] as? String ?? "ctrlAltL")
+        result(nil)
+      case "setShortcutRecording":
+        let recording = args["recording"] as? Bool ?? false
+        if recording, !shortcutRecording {
+          if let old = hotKey { UnregisterEventHotKey(old); hotKey = nil }
+          shortcutRecording = true
+        } else if !recording, shortcutRecording {
+          shortcutRecording = false
+          do { try configure(enabled: lookupEnabled, shortcut: shortcut) }
+          catch { lookupEnabled = false; updateStatusItem(); throw error }
+        }
         result(nil)
       case "hasAccessibilityPermission": result(DesktopAccessibilityPermission.isGranted())
       case "openAccessibilitySettings":
@@ -241,7 +251,7 @@ final class DesktopServices: NSObject, NSWindowDelegate, NSMenuItemValidation {
   }
 
   private func requestSelection() {
-    guard lookupEnabled, !capturing else { return }
+    guard lookupEnabled, !shortcutRecording, !capturing else { return }
     let anchor = NSEvent.mouseLocation
     NSLog("LumaLex selection request received")
     guard DesktopAccessibilityPermission.isGranted() else { unavailable("permission", anchor: anchor); return }
@@ -352,6 +362,41 @@ enum DesktopKeychain {
     guard status == errSecSuccess || status == errSecItemNotFound else {
       throw DesktopServiceError.message("keychain_delete_failed", "无法从钥匙串删除 API Key。")
     }
+  }
+}
+
+struct DesktopLookupShortcut {
+  let key: UInt32
+  let modifiers: UInt32
+  static func parse(_ name: String) -> DesktopLookupShortcut? {
+    let bits: Int, virtualKey: Int
+    switch name {
+    case "ctrlAltL": bits = 3; virtualKey = 0x4c
+    case "ctrlShiftL": bits = 6; virtualKey = 0x4c
+    case "altQ": bits = 1; virtualKey = 0x51
+    default:
+      let parts = name.split(separator: ":", omittingEmptySubsequences: false)
+      guard parts.count == 3, parts[0] == "custom", let mask = Int(parts[1]),
+            let code = Int(parts[2]) else { return nil }
+      bits = mask; virtualKey = code
+    }
+    guard bits > 0, bits < 8, bits & 3 != 0,
+          !(bits == 2 && [0x41, 0x43, 0x56, 0x58, 0x59, 0x5a].contains(virtualKey)),
+          !(bits == 1 && virtualKey == 0x73) else { return nil }
+    // Shared storage uses Windows virtual keys, never Carbon's hardware codes.
+    let letters = [0, 11, 8, 2, 14, 3, 5, 4, 34, 38, 40, 37, 46,
+                   45, 31, 35, 12, 15, 1, 17, 32, 9, 13, 7, 16, 6]
+    let digits = [29, 18, 19, 20, 21, 23, 22, 26, 28, 25]
+    let functions = [122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103]
+    let key: Int
+    switch virtualKey {
+    case 0x41...0x5a: key = letters[virtualKey - 0x41]
+    case 0x30...0x39: key = digits[virtualKey - 0x30]
+    case 0x70...0x7a: key = functions[virtualKey - 0x70]
+    default: return nil
+    }
+    let modifiers = (bits & 2 != 0 ? cmdKey : 0) | (bits & 1 != 0 ? optionKey : 0) | (bits & 4 != 0 ? shiftKey : 0)
+    return DesktopLookupShortcut(key: UInt32(key), modifiers: UInt32(modifiers))
   }
 }
 

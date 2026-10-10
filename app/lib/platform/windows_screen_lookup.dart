@@ -72,12 +72,20 @@ final class WindowsScreenLookupShortcut {
             ? 'F${virtualKey - 0x70 + 1}'
             : String.fromCharCode(virtualKey),
       ].join(' + ');
+  String get macosLabel => [
+        if ((modifiers & 2) != 0) '⌘',
+        if ((modifiers & 1) != 0) '⌥',
+        if ((modifiers & 4) != 0) '⇧',
+        virtualKey >= 0x70
+            ? 'F${virtualKey - 0x70 + 1}'
+            : String.fromCharCode(virtualKey),
+      ].join(' + ');
   String get label => Platform.isMacOS
       ? switch (name) {
           'ctrlAltL' => '⌘ + ⌥ + L',
           'ctrlShiftL' => '⌘ + ⇧ + L',
           'altQ' => '⌥ + Q',
-          _ => windowsLabel,
+          _ => macosLabel,
         }
       : windowsLabel;
 

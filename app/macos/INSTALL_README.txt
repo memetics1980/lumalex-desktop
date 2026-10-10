@@ -1,4 +1,4 @@
-LumaLex macOS 0.1.0 — 预览版 / Preview
+LumaLex Desktop 0.1.0 build 94 — macOS
 
 安装：将 LumaLex.app 拖到“应用程序”，从那里运行。
 需要 macOS 12+。Universal 包包含 Apple Silicon 与 Intel 架构；
@@ -9,7 +9,7 @@ LumaLex macOS 0.1.0 — 预览版 / Preview
 https://support.apple.com/zh-cn/102445
 不要关闭系统整体安全保护。
 
-取词：设置中开启屏幕取词，默认快捷键 ⌘⌥L。
+取词：设置中开启屏幕取词，默认快捷键 ⌘⌥L，也可自定义 ⌘/⌥/⇧ 组合。
 在系统设置 → 隐私与安全性 → 辅助功能中添加当前 LumaLex.app，
 启用后用 ⌘Q 退出并重开。更新后可能需要移除旧条目并重新授权。
 AI 需要单独配置 API、模型与密钥，只有取得语境后才提供 AI 按钮。

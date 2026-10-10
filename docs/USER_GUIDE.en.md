@@ -81,7 +81,7 @@ Entry-history navigation is different from switching dictionaries. Shortcut hand
 3. Leave LumaLex running and select a word or phrase in another application.
 4. Press the shortcut to open the lookup popup near the pointer.
 
-On Windows, click Custom shortcut (自定义快捷键…), press a combination in the recording area, then select Use this shortcut (使用此快捷键). Use Ctrl or Alt with a letter, digit or F1–F11, optionally adding Shift. Win, F12, unmodified keys and common copy/paste/editing combinations are excluded. Global lookup pauses while recording and resumes on cancellation. Saved shortcuts persist across restarts. macOS supports custom Command/Option combinations starting with build 95; public build 88 retains the three presets.
+On Windows, click Custom shortcut (自定义快捷键…), press a combination in the recording area, then select Use this shortcut (使用此快捷键). Use Ctrl or Alt with a letter, digit or F1–F11, optionally adding Shift. Win, F12, unmodified keys and common copy/paste/editing combinations are excluded. Global lookup pauses while recording and resumes on cancellation. Saved shortcuts persist across restarts. macOS supports custom Command/Option combinations with optional Shift; both platforms share the same release version.
 
 When lookup is enabled, changing the shortcut checks availability and preserves the original on a conflict. When lookup is disabled, you may save first; availability is checked when enabling it. Fully exiting LumaLex disables global lookup. To keep it running in the background, select the hide-to-tray close behavior.
 

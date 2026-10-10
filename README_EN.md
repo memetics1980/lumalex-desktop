@@ -10,14 +10,14 @@ LumaLex is a desktop MDX/MDD dictionary reader built with Flutter and Rust. This
 
 | Platform | Download and status |
 | --- | --- |
-| Windows 10/11 x64 | [Windows portable build 94](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94-windows); extract the entire archive |
-| macOS 12+ | [macOS preview build 88](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88); DMG and ZIP available |
+| Windows 10/11 x64 | [Windows portable build 94](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94); extract the entire archive |
+| macOS 12+ | [macOS build 94](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94); DMG and ZIP available |
 
 The macOS package is Universal (Apple Silicon / Intel). It has been tested on Apple Silicon; Intel hardware has not yet been tested. This preview is ad-hoc signed, without Developer ID signing or Apple notarization, so first launch may require confirmation in System Settings. Both hosts share settings, dictionary navigation and popup content. macOS supports menu-bar persistence, global lookup shortcuts, accessibility-based selection/context capture, Keychain and contextual AI. Capture depends on the source app. Screenshots below show Windows.
 
 LumaLex does not bundle or distribute commercial dictionaries. Once you import your own dictionaries, ordinary lookup works offline. Contextual AI explanations are optional, require separate configuration, and run only on request.
 
-[Download Windows portable edition](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94-windows) · [Download macOS preview](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88) · [macOS installation and use](docs/MACOS_GUIDE.en.md) · [User guide](docs/USER_GUIDE.en.md) · [中文使用说明](docs/USER_GUIDE.zh-CN.md) · [Windows build guide](app/windows/README.md)
+[Download Windows portable edition](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94) · [Download macOS edition](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94) · [macOS installation and use](docs/MACOS_GUIDE.en.md) · [User guide](docs/USER_GUIDE.en.md) · [中文使用说明](docs/USER_GUIDE.zh-CN.md) · [Windows build guide](app/windows/README.md)
 
 Click a screenshot to view the full-resolution original. Dictionaries and reading materials shown are examples and are not bundled with the app; AI output is an example, not a guaranteed answer.
 
@@ -75,6 +75,8 @@ Word document example: AI interprets “human touch” as a personal or human qu
 - Local history, favorites, review records, and learning-data export/restore.
 - A choice between exiting when the main window closes or continuing in the Windows system tray / macOS menu bar.
 
+Windows and macOS share [one Release page per version](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94). Choose your platform by the asset filename. The macOS reader provides Copy/Lookup for selections and direct lookup on double-click. Both popups preserve original queries and offer related forms; explicit form switching updates titles, favorites and main-window lookup.
+
 ## Quick start
 
 **macOS:** Open the downloaded DMG and drag `LumaLex.app` into Applications, then launch it there. Alternatively, extract the ZIP and copy the app into Applications. See the [macOS guide](docs/MACOS_GUIDE.en.md) for first launch and Accessibility permission.
@@ -84,7 +86,7 @@ Word document example: AI interprets “human touch” as a personal or human qu
 1. Extract the complete portable Windows package into a writable folder and run `LumaLex.exe`. Keep the DLLs and `data` directory beside it.
 2. Open the dictionary page and import a folder containing your MDX files and matching MDD resources.
 3. Enter a word on the lookup page, choose the lookup scope, and switch dictionaries to compare entries.
-4. Enable global screen lookup in Settings. The default shortcut is `Ctrl + Alt + L`; choose another offered combination or record a custom Windows shortcut if it conflicts.
+4. Enable global screen lookup in Settings. The default shortcut is `Ctrl + Alt + L`; choose another offered combination or record a custom shortcut if it conflicts.
 5. For AI, configure the compatible API base URL, model ID and API key in Settings, save them and test the connection. Open a popup from selected text and explicitly click its AI button.
 
 See the [user guide](docs/USER_GUIDE.en.md) for configuration, popup controls, PDF limitations and troubleshooting. English documentation does not change or translate the application's current UI labels; the guide includes Chinese labels where useful.

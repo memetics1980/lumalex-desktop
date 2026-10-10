@@ -121,3 +121,11 @@ The script does not change the app's signing identity or perform notarization.
 The DMG includes an Applications shortcut and bilingual installation notes.
 See the [Chinese user guide](../../docs/MACOS_GUIDE.zh-CN.md) or
 [English user guide](../../docs/MACOS_GUIDE.en.md) for installation and permissions.
+
+## Shared release version
+
+Windows and macOS use the same version/build number and one platform-neutral
+GitHub Release tag, such as `v0.1.0-build94`. Keep `app_version.dart` and
+`pubspec.yaml` synchronized. Upload platform-named assets to the same release;
+do not create separate `-windows` and `-macos` release pages. Retain each
+platform's signing and compatibility notes in the shared release description.

@@ -10,14 +10,14 @@ LumaLex 是由 Flutter 与 Rust 构建的桌面 MDX/MDD 词典阅读器。本仓
 
 | 平台 | 下载与状态 |
 | --- | --- |
-| Windows 10 / 11 x64 | [Windows 便携版 build 94](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94-windows)，完整解压后运行 |
-| macOS 12 及以上 | [macOS 预览版 build 88](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88)，提供 DMG 与 ZIP |
+| Windows 10 / 11 x64 | [Windows 便携版 build 94](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94)，完整解压后运行 |
+| macOS 12 及以上 | [macOS 版 build 94](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94)，提供 DMG 与 ZIP |
 
 macOS 包为 Universal（Apple Silicon / Intel）；目前已在 Apple Silicon 上验证，Intel 尚未实机测试。预览版采用临时签名，尚未使用 Developer ID 签名或经过 Apple 公证，首次打开可能需要在系统设置中确认。两端共用设置、词典导航和浮窗内容；macOS 支持菜单栏驻留、全局快捷键、辅助功能选词与语境、Keychain 和 AI 语境释义。实际取词能力取决于来源应用提供的文本接口。本文截图来自 Windows 版本。
 
 LumaLex 不内置或分发商业词典，也不是必须联网才能使用的在线词典：导入自己的词典后即可离线查词；AI 语境释义是需要单独配置、主动触发的可选功能。
 
-[下载 Windows 便携版](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94-windows) · [下载 macOS 预览版](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88) · [macOS 安装与使用](docs/MACOS_GUIDE.zh-CN.md) · [完整使用说明](docs/USER_GUIDE.zh-CN.md) · [English user guide](docs/USER_GUIDE.en.md) · [Windows 构建指南](app/windows/README.md)
+[下载 Windows 便携版](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94) · [下载 macOS 版](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94) · [macOS 安装与使用](docs/MACOS_GUIDE.zh-CN.md) · [完整使用说明](docs/USER_GUIDE.zh-CN.md) · [English user guide](docs/USER_GUIDE.en.md) · [Windows 构建指南](app/windows/README.md)
 
 点击截图可查看原尺寸图片。截图中的词典和阅读材料仅用于演示，不随程序分发；AI 截图是一次实际输出示例，不代表固定或保证正确的答案。
 
@@ -75,6 +75,8 @@ Word 文档示例：AI 将 human touch 解释为“人情味、人性化的接�
 - 支持搜索历史、收藏、复习记录与学习数据导出/恢复。
 - 可选择关闭主窗口时直接退出，或隐藏到 Windows 系统托盘 / macOS 菜单栏继续运行。
 
+Windows 与 macOS 按同一版本发布在 [统一 Release 页面](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94)，在 Assets 中按文件名选择平台。macOS 支持选区右键“复制／查词”和双击正文单词直接查词。两端浮窗均先查原词，再提供相关词形，主动切换后标题、收藏和返回主窗口随当前词形更新。
+
 ## 快速开始
 
 **macOS**：下载 DMG，打开后将 `LumaLex.app` 拖到“应用程序”，再从那里运行；ZIP 也可解压后复制应用。首次启动和辅助功能授权步骤见 [macOS 使用指南](docs/MACOS_GUIDE.zh-CN.md)。
@@ -84,7 +86,7 @@ Word 文档示例：AI 将 human touch 解释为“人情味、人性化的接�
 1. 将 Windows 便携包完整解压到可写文件夹，运行 `LumaLex.exe`。不要只复制 EXE：DLL 和 `data` 目录必须保留在一起。
 2. 在“词典”页面选择“导入词典”，导入包含 MDX 与配套 MDD 的文件夹。
 3. 在“查词”页面输入单词，选择查找范围，并切换词典对照。
-4. 在“设置 → 屏幕取词”启用全局快捷键，Windows 默认是 `Ctrl + Alt + L`，macOS 默认是 `⌘ + ⌥ + L`；若冲突，可改选其他提供的组合，Windows 还可录入自定义快捷键。macOS 首次使用需在系统设置中允许辅助功能访问。
+4. 在“设置 → 屏幕取词”启用全局快捷键，Windows 默认是 `Ctrl + Alt + L`，macOS 默认是 `⌘ + ⌥ + L`；若冲突，可改选其他提供的组合，两端均可录入自定义快捷键。macOS 首次使用需在系统设置中允许辅助功能访问。
 5. 如需 AI，在“设置 → AI 语境释义”填写兼容 API 地址、模型名称和 API Key，保存并测试连接。选词打开浮窗后，主动点击 AI 按钮。
 
 详细配置、浮窗操作、PDF 限制和故障排查见[使用说明](docs/USER_GUIDE.zh-CN.md)。

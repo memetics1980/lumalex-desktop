@@ -99,8 +99,8 @@ not replace Flutter's window delegate. Hiding retains the window/engine and the
 menu-bar item; explicit Quit remains an application termination request.
 
 Release uses `com.memetics.lumalex`. Debug/test builds use
-`com.memetics.lumalex.debug`, with a separate display name, preferences and
-Keychain service so a test host cannot masquerade as the release application.
+`com.memetics.lumalex.debug`, with separate preferences and a
+Keychain service. Both configurations display the app name as LumaLex.
 
 Local builds use ad-hoc signing unless a real signing identity is configured.
 Its designated requirement changes when the executable is rebuilt. An enabled

@@ -1091,6 +1091,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         break;
       case 'hiddenToTray':
         await Future.wait<void>([
+          _aggregateArticleController.setHostVisible(false),
           _aggregateArticleController.stopPlayback(),
           ..._articleControllers.values.map(
             (controller) => controller.stopPlayback(),
@@ -1098,7 +1099,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ]);
         break;
       case 'restoredFromTray':
+        await _aggregateArticleController.setHostVisible(true);
         if (mounted) _scheduleWordRecordsRefresh();
+        break;
+      case 'readerHostHidden':
+        await _aggregateArticleController.setHostVisible(false);
+        break;
+      case 'readerHostVisible':
+        await _aggregateArticleController.setHostVisible(true);
         break;
       case 'trayNotificationShown':
         _windowsTrayNotificationShown = true;

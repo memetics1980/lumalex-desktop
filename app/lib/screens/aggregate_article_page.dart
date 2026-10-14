@@ -10,6 +10,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../models/article.dart';
 import '../platform/desktop_platform.dart';
+import '../platform/reader_host_visibility.dart';
 import '../services/dictionary_content_server.dart';
 import '../services/dictionary_engine.dart';
 import '../services/dictionary_text_to_speech.dart';
@@ -214,6 +215,24 @@ class AggregateArticleSection {
 
 class AggregateArticlePageController {
   _AggregateArticlePageState? _state;
+  final _hostVisibility = ReaderHostVisibility(
+    onError: (error) => debugPrint('Reader visibility update failed: $error'),
+  );
+
+  Future<void> setHostVisible(bool visible) async {
+    if (Platform.isWindows) await _hostVisibility.setVisible(visible);
+  }
+
+  void _bindWebView(InAppWebViewController controller) {
+    if (!Platform.isWindows) return;
+    unawaited(_hostVisibility.bind((visible) async {
+      if (visible) {
+        await controller.resume();
+      } else {
+        await controller.pause();
+      }
+    }));
+  }
 
   Future<bool> scrollToDictionary(String mdxPath) {
     final state = _state;
@@ -232,10 +251,17 @@ class AggregateArticlePageController {
 
   Future<void> stopPlayback() async => _state?._stopPlayback();
 
-  void _attach(_AggregateArticlePageState state) => _state = state;
+  void _attach(_AggregateArticlePageState state) {
+    _state = state;
+    final controller = state._webViewController;
+    if (controller != null) _bindWebView(controller);
+  }
 
   void _detach(_AggregateArticlePageState state) {
-    if (identical(_state, state)) _state = null;
+    if (identical(_state, state)) {
+      _state = null;
+      unawaited(_hostVisibility.bind(null));
+    }
   }
 }
 
@@ -401,6 +427,7 @@ class _AggregateArticlePageState extends State<AggregateArticlePage> {
                   : _selectionContextMenu,
               onWebViewCreated: (controller) {
                 _webViewController = controller;
+                widget.controller._bindWebView(controller);
                 if (Platform.isAndroid) {
                   unawaited(controller.setContextMenu(_selectionContextMenu));
                 }

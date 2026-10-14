@@ -3,6 +3,7 @@
 #include <flutter/encodable_value.h>
 
 #include <wincred.h>
+#include <dwmapi.h>
 
 #include <limits>
 #include <optional>
@@ -27,6 +28,8 @@ constexpr UINT kScreenLookupReadyMessage = WM_APP + 2;
 constexpr UINT kTrayIconId = 1;
 constexpr UINT kTrayOpenCommand = 1001;
 constexpr UINT kTrayExitCommand = 1002;
+constexpr UINT_PTR kWebViewGuardTimer = 0x4C584757;
+constexpr UINT kReaderVisibilityMessage = WM_APP + 40;
 
 std::wstring Utf16FromUtf8(const std::string& value) {
   if (value.empty() ||
@@ -202,11 +205,16 @@ bool FlutterWindow::OnCreate() {
   // registered. The following call ensures a frame is pending to ensure the
   // window is shown. It is a no-op if the first frame hasn't completed yet.
   flutter_controller_->ForceRedraw();
+  // WebView2 may create/recreate an independent alpha-zero input surface after
+  // a page load or a GPU recovery. Check it even when the app stays in the tray.
+  SetTimer(GetHandle(), kWebViewGuardTimer, 500, nullptr);
 
   return true;
 }
 
 void FlutterWindow::OnDestroy() {
+  KillTimer(GetHandle(), kWebViewGuardTimer);
+  webview_input_guard_.Restore();
   if (screen_lookup_hotkey_registered_) {
     UnregisterHotKey(GetHandle(), screen_lookup_hotkey_id_);
     screen_lookup_hotkey_registered_ = false;
@@ -679,6 +687,7 @@ bool FlutterWindow::HideWindowToTray() {
     speech_voice_->Speak(nullptr, SPF_ASYNC | SPF_PURGEBEFORESPEAK, nullptr);
   }
   ShowWindow(GetHandle(), SW_HIDE);
+  SynchronizeReaderVisibility();
   NotifyWindowLifecycle("hiddenToTray");
   ShowFirstHideNotification();
   return true;
@@ -690,6 +699,7 @@ void FlutterWindow::RestoreWindowFromTray() {
     return;
   }
   ShowWindow(window, IsIconic(window) ? SW_RESTORE : SW_SHOW);
+  SynchronizeReaderVisibility();
   SetForegroundWindow(window);
   NotifyWindowLifecycle("restoredFromTray");
 }
@@ -743,6 +753,22 @@ void FlutterWindow::ShowFirstHideNotification() {
 void FlutterWindow::NotifyWindowLifecycle(const std::string& event) {
   if (window_lifecycle_channel_ != nullptr) {
     window_lifecycle_channel_->InvokeMethod(event, nullptr);
+  }
+}
+
+void FlutterWindow::SynchronizeReaderVisibility() {
+  webview_input_guard_.Refresh();
+  const HWND window = GetHandle();
+  DWORD cloaked = 0;
+  if (window != nullptr) {
+    DwmGetWindowAttribute(window, DWMWA_CLOAKED, &cloaked, sizeof(cloaked));
+  }
+  const bool visible = window != nullptr && IsWindowVisible(window) &&
+      !IsIconic(window) && cloaked == 0;
+  if (!reader_visibility_known_ || reader_host_visible_ != visible) {
+    reader_visibility_known_ = true;
+    reader_host_visible_ = visible;
+    NotifyWindowLifecycle(visible ? "readerHostVisible" : "readerHostHidden");
   }
 }
 
@@ -842,6 +868,15 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  if (message == kReaderVisibilityMessage ||
+      (message == WM_TIMER && wparam == kWebViewGuardTimer)) {
+    SynchronizeReaderVisibility();
+    return 0;
+  }
+  if (message == WM_SHOWWINDOW || message == WM_SIZE) {
+    // Query the final native state after Windows/plugins finish processing it.
+    PostMessage(hwnd, kReaderVisibilityMessage, 0, 0);
+  }
   if (message == taskbar_created_message_ && taskbar_created_message_ != 0) {
     tray_icon_added_ = false;
     if ((hide_to_tray_on_close_ || screen_lookup_enabled_) &&

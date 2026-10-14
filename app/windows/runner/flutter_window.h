@@ -14,6 +14,7 @@
 #include "screen_lookup_popup.h"
 #include "screen_lookup_service.h"
 #include "win32_window.h"
+#include "webview_input_guard.h"
 
 // A window that does nothing but host a Flutter view.
 class FlutterWindow : public Win32Window {
@@ -47,6 +48,7 @@ class FlutterWindow : public Win32Window {
   void NotifyWindowLifecycle(const std::string& event);
   void ExitFromTray();
   void TerminateApplication();
+  void SynchronizeReaderVisibility();
 
   // The project to run.
   flutter::DartProject project_;
@@ -75,6 +77,9 @@ class FlutterWindow : public Win32Window {
   bool screen_lookup_shortcut_recording_ = false;
   bool show_first_hide_notification_ = false;
   bool force_exit_ = false;
+  WebViewInputGuard webview_input_guard_;
+  bool reader_visibility_known_ = false;
+  bool reader_host_visible_ = false;
   std::wstring current_screen_lookup_query_;
   POINT current_screen_lookup_anchor_{};
 };

@@ -147,3 +147,9 @@ vendor/mdictlib/           Patched dictionary parser
 ```
 
 Toolchains, build caches, portable packages, dictionary data and sensitive configuration are excluded from source control. Retain third-party dependency and font licenses. Possessing a dictionary file does not grant redistribution rights; check its terms before using or sharing it.
+
+### Open-source license
+
+Except for portions with an explicit separate license, LumaLex's own code is licensed under the [MIT License](LICENSE). Commercial use, modification and redistribution, including closed-source redistribution, are permitted subject to retaining the copyright and license notices. The software is provided as is, without warranty.
+
+The Rust dictionary core, `dictionary-core`, retains its [MIT OR Apache-2.0 dual license](crates/dictionary-core/Cargo.toml), allowing users to choose either license. Third-party components (including `vendor/mdictlib`, Cargokit and the WebView plugin) and fonts retain their respective licenses and copyright notices. The project's MIT License does not replace those terms or grant redistribution rights for dictionary content.

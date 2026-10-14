@@ -96,7 +96,9 @@ portable release package.
 
 GitHub (`memetics1980/lumalex-desktop`) and Gitee (`memetics/lumalex-desktop`)
 must have matching `main` commits and matching current release metadata and
-attachments. GitHub is the publication source; run `tools/sync_gitee.py` on the
+attachments from build 96 onward. Pre-96 packages and their archive-only notices
+remain on GitHub and are excluded from Gitee, including when attached to a newer
+GitHub release. GitHub is the publication source; run `tools/sync_gitee.py` on the
 local machine after source updates and release publication. The account owner
 chose local-only synchronization: do not upload the Gitee token to GitHub or
 configure cloud mirroring without a new explicit instruction. A failed local
@@ -105,7 +107,8 @@ sync must be resolved before publication is considered complete.
 Use the same accepted binaries, filenames and SHA-256 files on both hosts.
 Include the current packages for both desktop platforms on the shared release
 page, clearly labeling different build numbers when one platform is unchanged.
-Keep all historical releases intact; Gitee starts with build 96.
+Keep all historical releases intact on GitHub; Gitee starts with build 96 and
+does not retain pre-96 release attachments or archive-only notices.
 
 Finish uploading all assets to a GitHub draft, then publish it after acceptance.
 With Python 3.12 and requests installed, run `python tools/sync_gitee.py` for

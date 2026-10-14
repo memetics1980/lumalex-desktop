@@ -7,12 +7,14 @@
   both hosts and verify their commit IDs before reporting completion.
 - Publish accepted desktop builds on GitHub first, then sync the same tag,
   source commit, title, bilingual notes, prerelease status, filenames and exact
-  asset bytes to Gitee. Do not rebuild separately for each hosting platform.
+  asset bytes to Gitee, excluding pre-96 assets and their archive-only notices.
+  Do not rebuild separately for each hosting platform.
 - Include the current Windows and macOS packages and their checksums on the
   shared release page. Clearly label different platform build numbers. Reuse
   an unchanged accepted platform package when only the other platform updates.
-- Preserve historical releases. Gitee starts with build 96; do not import older
-  release history unless the user requests it. Never publish experimental
+- Preserve historical releases on GitHub. Gitee starts with build 96; do not
+  import older releases, packages or their archive-only notices, even when
+  those assets are attached to a newer GitHub release. Never publish experimental
   branches or private dictionary data as an official release.
 - Validate the packaged build and obtain the user's acceptance before releasing
   a new application version. Normal source/documentation synchronization does

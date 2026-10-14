@@ -3,6 +3,7 @@ import base64
 import argparse
 import hashlib
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -14,6 +15,35 @@ ROOT = Path(__file__).resolve().parents[1]
 GH = 'https://api.github.com/repos/memetics1980/lumalex-desktop'
 GT = 'https://gitee.com/api/v5/repos/memetics/lumalex-desktop'
 REMOTE = 'https://gitee.com/memetics/lumalex-desktop.git'
+GITEE_FIRST_BUILD = 96
+
+
+def release_build(value):
+    match = re.match(r'^(?:v|LumaLex-)\d+(?:\.\d+)+-build(\d+)(?:[-.]|$)', value)
+    return int(match.group(1)) if match else None
+
+
+def gitee_release(source):
+    """Keep pre-96 packages and their archive notices on GitHub only."""
+    build = release_build(source['tag_name'])
+    if build is not None and build < GITEE_FIRST_BUILD:
+        raise RuntimeError('Gitee releases start with build 96; older releases stay on GitHub')
+    assets = []
+    for item in source['assets']:
+        name = asset_name(item['name'])
+        build = release_build(name)
+        if build is None or build >= GITEE_FIRST_BUILD:
+            assets.append(item)
+    body = source['body'] or ''
+    notices = (
+        r'本页也保留先前的 macOS build (\d+) 附件；升级请选择文件名含 `build\d+` 的安装包。\s*',
+        r'Previous macOS build (\d+) assets are retained on this page; '
+        r'choose filenames containing `build\d+` to upgrade\.\s*',
+    )
+    for notice in notices:
+        body = re.sub(notice, lambda m: '' if int(m.group(1)) < GITEE_FIRST_BUILD
+                      else m.group(0), body)
+    return {**source, 'assets': assets, 'body': body}
 
 
 def local_gitee_token():
@@ -102,6 +132,7 @@ class Mirror:
         source = self.request(self.gh, 'GET', GH + endpoint).json()
         if source['draft']:
             raise RuntimeError('Draft releases must not be mirrored')
+        source = gitee_release(source)
         tag = source['tag_name']
         self.git('fetch', 'origin', 'refs/tags/' + tag + ':refs/tags/' + tag)
         commit = self.git('rev-parse', 'refs/tags/' + tag + '^{commit}')

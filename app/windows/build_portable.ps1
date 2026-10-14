@@ -57,6 +57,7 @@ try {
         # binary metadata, not Dart source, and crash the Windows test loader.
         $TestFiles = Get-ChildItem -Path "test" -Filter "*_test.dart" `
             -Recurse -File |
+            Where-Object { -not $_.Name.StartsWith("._") } |
             Select-Object -ExpandProperty FullName
         if ($TestFiles.Count -eq 0) {
             throw "No Flutter test files were found."
@@ -99,6 +100,22 @@ try {
     $ZipPath = Join-Path $ReleaseDirectory "$PackageName.zip"
     $HashPath = "${ZipPath}.sha256.txt"
 
+    # Never remove a computed staging path outside the release directory.
+    $ReleaseRoot = [System.IO.Path]::GetFullPath($ReleaseDirectory).TrimEnd('\')
+    foreach ($ArtifactPath in @($StageDirectory, $ZipPath, $HashPath)) {
+        $ResolvedArtifact = [System.IO.Path]::GetFullPath($ArtifactPath)
+        if (-not $ResolvedArtifact.StartsWith(
+            $ReleaseRoot + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Invalid portable artifact path: $ResolvedArtifact"
+        }
+    }
+    $ExecutableInfo = (Get-Item -LiteralPath (Join-Path $BuildDirectory "LumaLex.exe")).VersionInfo
+    if ($ExecutableInfo.CompanyName -ne "LumaLex" -or
+        $ExecutableInfo.ProductName -ne "LumaLex" -or
+        $ExecutableInfo.ProductVersion -ne $Version) {
+        throw "Executable identity/version does not match this formal build: $Version"
+    }
+
     if (Test-Path $StageDirectory) {
         Remove-Item -Recurse -Force $StageDirectory
     }
@@ -118,6 +135,12 @@ try {
     $RequiredPaths = @(
         "LumaLex.exe",
         "flutter_windows.dll",
+        "dictionary_bridge.dll",
+        "flutter_inappwebview_windows_plugin.dll",
+        "just_audio_windows_plugin.dll",
+        "WebView2Loader.dll",
+        "data\app.so",
+        "data\icudtl.dat",
         "data\flutter_assets"
     )
     foreach ($RequiredPath in $RequiredPaths) {

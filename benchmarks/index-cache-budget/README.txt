@@ -1,4 +1,8 @@
-Shared index chunk cache — isolated branch codex/index-cache-budget
+Shared index chunk cache — adopted in desktop build 96
+
+The original measurements below were collected on codex/index-cache-budget.
+Build 96 adopts that cache implementation on main; experimental Windows
+identities and B+tree changes remain on their separate branches.
 
 Production wiring is in dictionary-bridge. Its process-owned pool is shared
 across all MDX readers: 64 MiB desktop, 8 MiB Android/iOS. No Dart API or stored

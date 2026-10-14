@@ -4,7 +4,7 @@
 
 ## Download and install
 
-Download the DMG or ZIP from [macOS build 88](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build88). Requires macOS 12+. The package includes Apple Silicon and Intel slices. Apple Silicon has been tested; Intel hardware has not yet been tested.
+Download the DMG or ZIP from [LumaLex Desktop build 94](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94). Requires macOS 12+. The package includes Apple Silicon and Intel slices. Apple Silicon has been tested; Intel hardware has not yet been tested.
 
 1. Open the DMG, drag `LumaLex.app` into Applications, then eject the disk image. Alternatively, extract the ZIP and copy the app into Applications.
 2. Launch the app from Applications. Before updating, quit the previous version with `⌘Q`, then replace it.
@@ -19,6 +19,8 @@ Enable screen lookup in Settings (设置 → 屏幕取词). The default global s
 
 Add the installed `LumaLex.app` to System Settings → Privacy & Security → Accessibility and enable it. “Show current application in Finder” (在 Finder 中显示当前应用) in LumaLex settings locates the running copy. Quit with `⌘Q` and reopen after granting access.
 
+Custom shortcut also records Command or Option with letters, digits or F1–F11, optionally adding Shift. Recording temporarily unregisters lookup; cancellation restores the old key, and conflicts retain the previous setting.
+
 Select a word in browser body text and press the shortcut. Edge / Chrome may take about two extra seconds to initialize accessibility on the first request. Contextual AI is available when the source exposes nearby context. If only copying is possible, the popup indicates compatibility copy mode, with dictionary lookup only. Copy mode updates the clipboard. Password fields are excluded; capture does not use OCR.
 
 After an update, an old Accessibility entry may not authorize the changed ad-hoc-signed binary. Remove the old entry, add and enable the current application, then quit and reopen. The debug/test edition has a separate identifier and permission state.
@@ -30,6 +32,12 @@ After an update, an old Accessibility entry may not authorize the changed ad-hoc
 - Automatic mode closes five seconds after the pointer leaves; pinning keeps it visible. Pending AI pauses automatic closure.
 - Pronunciation depends on the dictionary's resources. Favorites are shared with the main window.
 - Choose hide-to-menu-bar in Settings to keep the app running after clicking X, then restore it from the menu-bar icon. Screen lookup requires background operation. Quit completely through the menu bar or `⌘Q`.
+
+## Reader selections and word forms
+
+The main reader selection menu provides Copy and Lookup. Double-clicking a word looks it up directly; audio controls and entry links retain their own actions.
+
+Popup lookup checks the original query across the current scope before limited related forms. Explicitly switching a form updates its title, favorites and the query opened in the main window. Phrase headword candidates require an explicit click rather than presenting a single-word definition as the phrase meaning. Local fallback does not invoke AI; contextual AI retains the original selection and sentence.
 
 ## Contextual AI
 

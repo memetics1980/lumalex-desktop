@@ -432,7 +432,7 @@ class AppSettingsPage extends StatelessWidget {
                               },
                       ),
                     ),
-                    if (Platform.isWindows &&
+                    if (isLumaLexDesktop &&
                         onShortcutRecordingChanged != null) ...[
                       const SizedBox(height: 10),
                       OutlinedButton.icon(

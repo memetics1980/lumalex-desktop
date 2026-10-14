@@ -14,7 +14,8 @@ void main() {
       modifiers: 7,
       virtualKey: 0x79,
     );
-    expect(shortcut.label, 'Ctrl + Alt + Shift + F10');
+    expect(shortcut.windowsLabel, 'Ctrl + Alt + Shift + F10');
+    expect(shortcut.macosLabel, '⌘ + ⌥ + ⇧ + F10');
     expect(windowsScreenLookupShortcutFromStorage(shortcut.name), shortcut);
     expect(WindowsScreenLookupShortcut.custom(modifiers: 3, virtualKey: 0x4c),
         WindowsScreenLookupShortcut.ctrlAltL);
@@ -73,13 +74,18 @@ void main() {
                 find.byKey(const ValueKey('save-screen-lookup-shortcut')))
             .onPressed,
         isNull);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyDownEvent((Platform.isMacOS
+        ? LogicalKeyboardKey.metaLeft
+        : LogicalKeyboardKey.controlLeft));
     await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyUpEvent((Platform.isMacOS
+        ? LogicalKeyboardKey.metaLeft
+        : LogicalKeyboardKey.controlLeft));
     await tester.pump();
-    expect(find.text('Ctrl + Alt + K'), findsOneWidget);
+    expect(find.text(Platform.isMacOS ? '⌘ + ⌥ + K' : 'Ctrl + Alt + K'),
+        findsOneWidget);
     expect(
         tester
             .widget<FilledButton>(
@@ -97,9 +103,10 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      const channel = MethodChannel('local_dictionary/windows_screen_lookup');
-      const lifecycle =
-          MethodChannel('local_dictionary/windows_window_lifecycle');
+      final channel = MethodChannel(
+          'local_dictionary/${Platform.isMacOS ? 'macos' : 'windows'}_screen_lookup');
+      final lifecycle = MethodChannel(
+          'local_dictionary/${Platform.isMacOS ? 'macos' : 'windows'}_window_lifecycle');
       final recordings = <bool>[];
       final configured = <String>[];
       tester.binding.defaultBinaryMessenger
@@ -136,13 +143,20 @@ void main() {
       final customize =
           find.byKey(const ValueKey('custom-screen-lookup-shortcut'));
       await tester.ensureVisible(customize);
+      await tester.pumpAndSettle();
       await tester.tap(customize);
       await tester.pumpAndSettle();
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      expect(recordings, [true]);
+      expect(find.byType(ScreenLookupShortcutDialog), findsOneWidget);
+      await tester.sendKeyDownEvent((Platform.isMacOS
+          ? LogicalKeyboardKey.metaLeft
+          : LogicalKeyboardKey.controlLeft));
       await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyUpEvent((Platform.isMacOS
+          ? LogicalKeyboardKey.metaLeft
+          : LogicalKeyboardKey.controlLeft));
       await tester.pump();
       await tester
           .tap(find.byKey(const ValueKey('save-screen-lookup-shortcut')));
@@ -161,7 +175,7 @@ void main() {
         expect(find.text('这个快捷键已被其他程序占用，请选择另一个。'), findsOneWidget);
       }
       expect(tester.takeException(), isNull);
-    }, skip: !Platform.isWindows);
+    }, skip: !(Platform.isWindows || Platform.isMacOS));
   }
 
   testWidgets('recording cancellation resumes the shortcut without saving',

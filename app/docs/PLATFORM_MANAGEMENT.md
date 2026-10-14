@@ -102,3 +102,15 @@ Windows native integration; follow the Windows checklist on a Windows machine.
 Publish platform artifacts under a shared version tag only after each artifact
 passes its own release checklist. macOS preview releases may be published
 separately while feature support catches up. Keep signing credentials out of Git.
+
+### Unified desktop release pages
+
+Use a platform-neutral tag such as `v0.1.0-build94` for both Windows and macOS.
+Both `pubspec.yaml` and `app_version.dart` must match the published build number.
+Keep platform names in asset filenames, not separate release tags/pages. When
+adding a platform later, upload its verified assets to the existing shared
+release and update the description for both platforms. Preserve already-tested
+artifacts instead of renaming an old binary to pretend it is a newer version.
+List each platform's system requirements, installation steps, signing status
+and untested CPU architectures in the same release notes. Verify uploaded file
+sizes and SHA-256 hashes before retiring a duplicate page.

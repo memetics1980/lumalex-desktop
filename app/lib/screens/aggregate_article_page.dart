@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -10,6 +11,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../models/article.dart';
 import '../platform/desktop_platform.dart';
+import '../platform/macos_reader_interactions.dart';
 import '../platform/reader_host_visibility.dart';
 import '../services/dictionary_content_server.dart';
 import '../services/dictionary_engine.dart';
@@ -402,6 +404,16 @@ class _AggregateArticlePageState extends State<AggregateArticlePage> {
             behavior: HitTestBehavior.translucent,
             onPointerSignal: _handlePointerSignal,
             child: InAppWebView(
+              initialUserScripts: Platform.isMacOS
+                  ? UnmodifiableListView([
+                      UserScript(
+                        source: macosReaderInteractionJavascript(),
+                        injectionTime:
+                            UserScriptInjectionTime.AT_DOCUMENT_START,
+                        forMainFrameOnly: false,
+                      ),
+                    ])
+                  : null,
               initialSettings: InAppWebViewSettings(
                 allowContentAccess: false,
                 allowFileAccess: false,

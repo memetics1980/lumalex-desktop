@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -47,19 +49,23 @@ class _ScreenLookupShortcutDialogState
       return KeyEventResult.handled;
     }
     final keyboard = HardwareKeyboard.instance;
-    final modifiers = (keyboard.isControlPressed ? 2 : 0) |
-        (keyboard.isAltPressed ? 1 : 0) |
-        (keyboard.isShiftPressed ? 4 : 0);
+    final macOS = Platform.isMacOS;
+    final modifiers =
+        ((macOS ? keyboard.isMetaPressed : keyboard.isControlPressed) ? 2 : 0) |
+            (keyboard.isAltPressed ? 1 : 0) |
+            (keyboard.isShiftPressed ? 4 : 0);
     final virtualKey = WindowsScreenLookupShortcut.virtualKeyFor(key);
     setState(() {
       _shortcut = null;
-      if (keyboard.isMetaPressed ||
+      if ((macOS ? keyboard.isControlPressed : keyboard.isMetaPressed) ||
           virtualKey == null ||
           !WindowsScreenLookupShortcut.isValidCombination(
             modifiers,
             virtualKey,
           )) {
-        _error = '请使用 Ctrl 或 Alt 搭配字母、数字或 F1–F11；避开复制、粘贴等常用组合。';
+        _error = macOS
+            ? '请使用 ⌘ 或 ⌥ 搭配字母、数字或 F1–F11；避开复制、粘贴等常用组合。'
+            : '请使用 Ctrl 或 Alt 搭配字母、数字或 F1–F11；避开复制、粘贴等常用组合。';
       } else {
         _error = null;
         _shortcut = WindowsScreenLookupShortcut.custom(
@@ -106,7 +112,9 @@ class _ScreenLookupShortcutDialogState
               const SizedBox(height: 12),
               Text(
                   _error ??
-                      '至少包含 Ctrl 或 Alt，可加 Shift。不支持 Win 键、F12、单键及复制粘贴等常用组合。',
+                      (Platform.isMacOS
+                          ? '至少包含 ⌘ 或 ⌥，可加 ⇧。不支持 Control、F12、单键及复制粘贴等常用组合。'
+                          : '至少包含 Ctrl 或 Alt，可加 Shift。不支持 Win 键、F12、单键及复制粘贴等常用组合。'),
                   style: TextStyle(
                       color: _error == null
                           ? Theme.of(context).colorScheme.onSurfaceVariant

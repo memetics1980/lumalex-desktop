@@ -94,6 +94,30 @@ portable release package.
 
 ## Repository and release management
 
+GitHub (`memetics1980/lumalex-desktop`) and Gitee (`memetics/lumalex-desktop`)
+must have matching `main` commits and matching current release metadata and
+attachments. GitHub is the publication source; `.github/workflows/gitee-sync.yml`
+mirrors main updates and published/edited releases to Gitee. It uses the
+repository Actions secret `GITEE_TOKEN` and Actions variable
+`GITEE_SYNC_ENABLED=true`; never commit a token. Enable the workflow only after
+the account owner authorizes storing the Gitee credential in GitHub. A failed sync
+must be resolved before publication is considered complete.
+
+Use the same accepted binaries, filenames and SHA-256 files on both hosts.
+Include the current packages for both desktop platforms on the shared release
+page, clearly labeling different build numbers when one platform is unchanged.
+Keep all historical releases intact; Gitee starts with build 96.
+
+Finish uploading all assets to a GitHub draft, then publish it after acceptance.
+For later asset additions or a missed mirror, manually run **Sync Gitee** with
+the release tag (or `latest`); asset uploads alone do not trigger this workflow.
+Manual code-only sync leaves the release tag empty. Locally, set `GITEE_TOKEN`
+and optionally `GITHUB_TOKEN` in the process environment, set `RELEASE_TAG` if
+needed, and run `python tools/sync_gitee.py` with Python 3.12 and requests
+installed. The script verifies branch commits, release metadata and downloaded
+attachment hashes. Unexpected extra or changed attachments require inspection;
+the script never deletes release files or force-pushes branches or tags.
+
 Use `main` for both desktop platforms and short-lived feature branches. Run
 shared Flutter and Rust checks on both Windows and macOS. A platform-specific
 change must also pass its native build. A successful macOS build does not verify

@@ -96,12 +96,11 @@ portable release package.
 
 GitHub (`memetics1980/lumalex-desktop`) and Gitee (`memetics/lumalex-desktop`)
 must have matching `main` commits and matching current release metadata and
-attachments. GitHub is the publication source; `.github/workflows/gitee-sync.yml`
-mirrors main updates and published/edited releases to Gitee. It uses the
-repository Actions secret `GITEE_TOKEN` and Actions variable
-`GITEE_SYNC_ENABLED=true`; never commit a token. Enable the workflow only after
-the account owner authorizes storing the Gitee credential in GitHub. A failed sync
-must be resolved before publication is considered complete.
+attachments. GitHub is the publication source; run `tools/sync_gitee.py` on the
+local machine after source updates and release publication. The account owner
+chose local-only synchronization: do not upload the Gitee token to GitHub or
+configure cloud mirroring without a new explicit instruction. A failed local
+sync must be resolved before publication is considered complete.
 
 Use the same accepted binaries, filenames and SHA-256 files on both hosts.
 Include the current packages for both desktop platforms on the shared release
@@ -109,12 +108,17 @@ page, clearly labeling different build numbers when one platform is unchanged.
 Keep all historical releases intact; Gitee starts with build 96.
 
 Finish uploading all assets to a GitHub draft, then publish it after acceptance.
-For later asset additions or a missed mirror, manually run **Sync Gitee** with
-the release tag (or `latest`); asset uploads alone do not trigger this workflow.
-Manual code-only sync leaves the release tag empty. Locally, set `GITEE_TOKEN`
-and optionally `GITHUB_TOKEN` in the process environment, set `RELEASE_TAG` if
-needed, and run `python tools/sync_gitee.py` with Python 3.12 and requests
-installed. The script verifies branch commits, release metadata and downloaded
+With Python 3.12 and requests installed, run `python tools/sync_gitee.py` for
+code-only synchronization. For a release, run
+`python tools/sync_gitee.py --release-tag v0.1.0-build96`, substituting the
+accepted release's tag, or use `--release-tag latest`. Run it again after any
+release-note edits or asset additions. This is a local publication step, not a
+background or cloud service.
+
+The script reads `GITEE_TOKEN` from the process environment or the existing
+ignored `.toolchains/gitee_token.txt` (also accepts `gitee-token.txt`). Optionally
+set `GITHUB_TOKEN` for authenticated GitHub API requests. Never commit these
+credentials. The script verifies branch commits, release metadata and downloaded
 attachment hashes. Unexpected extra or changed attachments require inspection;
 the script never deletes release files or force-pushes branches or tags.
 

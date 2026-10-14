@@ -17,9 +17,11 @@
 - Validate the packaged build and obtain the user's acceptance before releasing
   a new application version. Normal source/documentation synchronization does
   not require a new build or another release approval.
-- Use `.github/workflows/gitee-sync.yml` and `tools/sync_gitee.py` for mirroring.
-  Verify a successful sync run, not merely a successful GitHub upload. A failed
-  mirror is an incomplete publication: resolve it or report the exact blocker.
+- Run `tools/sync_gitee.py` locally for mirroring; the user chose local-only
+  synchronization. Do not upload the Gitee token to GitHub, configure an Actions
+  secret, or enable cloud mirroring unless the user explicitly changes this
+  preference. Verify a successful local sync, not merely a GitHub upload. A
+  failed mirror is an incomplete publication: resolve it or report the blocker.
 - Keep credentials out of source, logs and release files. Read tokens from
   environment variables or the existing ignored local credential files.
 - Retain MIT licensing for LumaLex's own code and existing component licenses.

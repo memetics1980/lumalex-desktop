@@ -1,11 +1,12 @@
 """Checks for mirror safety failures and repeatable publication."""
 import hashlib
+import os
 import tempfile
 from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from sync_gitee import Mirror, asset_name, verify_file
+from sync_gitee import Mirror, asset_name, local_gitee_token, verify_file
 
 
 class Reply:
@@ -19,6 +20,19 @@ class Reply:
 
 
 class MirrorTests(unittest.TestCase):
+    def test_local_token_reads_bom_and_alternate_filename(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / '.toolchains').mkdir()
+            (root / '.toolchains/gitee-token.txt').write_text(' file-token\n', encoding='utf-8-sig')
+            with patch('sync_gitee.ROOT', root), patch.dict(os.environ, {'GITEE_TOKEN': ''}):
+                self.assertEqual(local_gitee_token(), 'file-token')
+
+    def test_environment_token_takes_precedence_over_local_file(self):
+        with patch.dict(os.environ, {'GITEE_TOKEN': ' env-token '}), \
+             patch('sync_gitee.ROOT', Path('nonexistent-test-directory')):
+            self.assertEqual(local_gitee_token(), 'env-token')
+
     def test_asset_paths_cannot_escape_temporary_directory(self):
         for name in ('../token', '..\\token', '/absolute', '.', '..', '', 'a\x00b'):
             with self.subTest(name=name), self.assertRaises(ValueError):

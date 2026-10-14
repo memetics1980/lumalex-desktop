@@ -1,5 +1,6 @@
 """Mirror approved public source/releases without deleting or rebuilding assets."""
 import base64
+import argparse
 import hashlib
 import os
 from pathlib import Path
@@ -13,6 +14,19 @@ ROOT = Path(__file__).resolve().parents[1]
 GH = 'https://api.github.com/repos/memetics1980/lumalex-desktop'
 GT = 'https://gitee.com/api/v5/repos/memetics/lumalex-desktop'
 REMOTE = 'https://gitee.com/memetics/lumalex-desktop.git'
+
+
+def local_gitee_token():
+    token = os.environ.get('GITEE_TOKEN', '').strip()
+    if token:
+        return token
+    for name in ('gitee_token.txt', 'gitee-token.txt'):
+        path = ROOT / '.toolchains' / name
+        if path.is_file():
+            token = path.read_text(encoding='utf-8-sig').strip()
+            if token:
+                return token
+    return ''
 
 
 def asset_name(name):
@@ -31,7 +45,7 @@ def verify_file(path, size, digest=None):
 class Mirror:
     def __init__(self, token, github_token=''):
         if not token:
-            raise RuntimeError('GITEE_TOKEN is required; configure the repository Actions secret')
+            raise RuntimeError('Gitee token is required in GITEE_TOKEN or an ignored local token file')
         self.token = token
         self.gt = requests.Session()
         self.gt.headers.update({'Authorization': 'Bearer ' + token, 'User-Agent': 'LumaLex-mirror'})
@@ -140,14 +154,20 @@ class Mirror:
 
 
 if __name__ == '__main__':
+    token = ''
     try:
-        mirror = Mirror(os.environ.get('GITEE_TOKEN', ''), os.environ.get('GITHUB_TOKEN', ''))
+        parser = argparse.ArgumentParser(description=__doc__)
+        parser.add_argument('--release-tag', default=os.environ.get('RELEASE_TAG', ''),
+                            help='Accepted release tag, latest, or empty for code only')
+        args = parser.parse_args()
+        token = local_gitee_token()
+        mirror = Mirror(token, os.environ.get('GITHUB_TOKEN', ''))
         mirror.sync_code()
-        if os.environ.get('RELEASE_TAG'):
-            mirror.sync_release(os.environ['RELEASE_TAG'])
+        if args.release_tag:
+            mirror.sync_release(args.release_tag)
     except Exception as error:
         message = str(error)
-        for secret in (os.environ.get('GITEE_TOKEN'), os.environ.get('GITHUB_TOKEN')):
+        for secret in (token, os.environ.get('GITHUB_TOKEN')):
             if secret:
                 message = message.replace(secret, '[redacted]')
         print(message, file=sys.stderr)

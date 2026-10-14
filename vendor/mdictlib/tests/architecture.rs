@@ -27,6 +27,14 @@ fn rust_files_under(relative: &str) -> Vec<String> {
         });
         for entry in entries {
             let path = entry.expect("directory entry is readable").path();
+            // macOS archives may carry binary AppleDouble metadata alongside
+            // real sources. These files are not Rust compilation units.
+            if path
+                .file_name()
+                .is_some_and(|name| name.to_string_lossy().starts_with("._"))
+            {
+                continue;
+            }
             if path.is_dir() {
                 walk(&path, base, out);
             } else if path.extension().is_some_and(|ext| ext == "rs") {

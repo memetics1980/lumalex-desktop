@@ -4,6 +4,8 @@
 
 [简体中文](README.md) | [English](README_EN.md)
 
+[Gitee mirror and downloads](https://gitee.com/memetics/lumalex-desktop/releases): Windows build 96 and macOS build 94, with the same packages as GitHub and matching SHA-256 files.
+
 Keep your dictionaries local, look up words without leaving your reading, and use AI to understand a word in context.
 
 LumaLex is a desktop MDX/MDD dictionary reader built with Flutter and Rust. This repository maintains Windows and macOS together, sharing application code and the Rust dictionary engine.

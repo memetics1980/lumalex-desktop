@@ -8,6 +8,8 @@
 
 LumaLex 是由 Flutter 与 Rust 构建的桌面 MDX/MDD 词典阅读器。本仓库统一维护 Windows 与 macOS，共享界面、学习数据逻辑和 Rust 词典引擎。
 
+[Gitee 镜像与国内下载](https://gitee.com/memetics/lumalex-desktop/releases)：Windows build 96、macOS build 94，安装包与 GitHub 原件一致，并附 SHA-256 校验文件。
+
 | 平台 | 下载与状态 |
 | --- | --- |
 | Windows 10 / 11 x64 | [Windows 便携版 build 96](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build96)，完整解压后运行 |

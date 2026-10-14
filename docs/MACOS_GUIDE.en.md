@@ -4,7 +4,7 @@
 
 ## Download and install
 
-Download the DMG or ZIP from [LumaLex Desktop build 94](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94). Requires macOS 12+. The package includes Apple Silicon and Intel slices. Apple Silicon has been tested; Intel hardware has not yet been tested.
+Download the DMG or ZIP from the [latest LumaLex Desktop release](https://github.com/memetics1980/lumalex-desktop/releases/latest), and check the macOS package version in its filename. Requires macOS 12+. The package includes Apple Silicon and Intel slices. Apple Silicon has been tested; Intel hardware has not yet been tested.
 
 1. Open the DMG, drag `LumaLex.app` into Applications, then eject the disk image. Alternatively, extract the ZIP and copy the app into Applications.
 2. Launch the app from Applications. Before updating, quit the previous version with `⌘Q`, then replace it.

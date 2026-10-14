@@ -4,7 +4,7 @@
 
 ## 下载与安装
 
-从 [LumaLex Desktop build 94 Release](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94) 下载 DMG 或 ZIP。需要 macOS 12 或更新版本。包内包含 Apple Silicon 和 Intel 架构，当前已在 Apple Silicon 上测试，Intel 尚未实机验证。
+从 [LumaLex Desktop 最新 Release](https://github.com/memetics1980/lumalex-desktop/releases/latest) 下载 DMG 或 ZIP，并按附件文件名确认 macOS 包的版本号。需要 macOS 12 或更新版本。包内包含 Apple Silicon 和 Intel 架构，当前已在 Apple Silicon 上测试，Intel 尚未实机验证。
 
 1. 打开 DMG，将 `LumaLex.app` 拖到“Applications / 应用程序”，然后弹出磁盘映像。也可解压 ZIP，把其中的应用复制到“应用程序”。
 2. 从“应用程序”打开 LumaLex。更新前先用 `⌘Q` 退出旧版，再替换应用。

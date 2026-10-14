@@ -4,7 +4,7 @@
 
 [简体中文](README.md) | [English](README_EN.md)
 
-[Gitee mirror and downloads](https://gitee.com/memetics/lumalex-desktop/releases): Windows build 96 and macOS build 94, with the same packages as GitHub and matching SHA-256 files.
+[Gitee mirror and downloads](https://gitee.com/memetics/lumalex-desktop/releases): Windows build 96 and macOS build 96, with the same packages as GitHub and matching SHA-256 files.
 
 Keep your dictionaries local, look up words without leaving your reading, and use AI to understand a word in context.
 
@@ -13,13 +13,13 @@ LumaLex is a desktop MDX/MDD dictionary reader built with Flutter and Rust. This
 | Platform | Download and status |
 | --- | --- |
 | Windows 10/11 x64 | [Windows portable build 96](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build96); extract the entire archive |
-| macOS 12+ | [macOS build 94](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94); DMG and ZIP available |
+| macOS 12+ | [macOS build 96](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build96); DMG and ZIP available |
 
 The macOS package is Universal (Apple Silicon / Intel). It has been tested on Apple Silicon; Intel hardware has not yet been tested. This preview is ad-hoc signed, without Developer ID signing or Apple notarization, so first launch may require confirmation in System Settings. Both hosts share settings, dictionary navigation and popup content. macOS supports menu-bar persistence, global lookup shortcuts, accessibility-based selection/context capture, Keychain and contextual AI. Capture depends on the source app. Screenshots below show Windows.
 
 LumaLex does not bundle or distribute commercial dictionaries. Once you import your own dictionaries, ordinary lookup works offline. Contextual AI explanations are optional, require separate configuration, and run only on request.
 
-[Download Windows portable edition](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build96) · [Download macOS edition](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94) · [macOS installation and use](docs/MACOS_GUIDE.en.md) · [User guide](docs/USER_GUIDE.en.md) · [中文使用说明](docs/USER_GUIDE.zh-CN.md) · [Windows build guide](app/windows/README.md)
+[Download Windows portable edition](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build96) · [Download macOS edition](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build96) · [macOS installation and use](docs/MACOS_GUIDE.en.md) · [User guide](docs/USER_GUIDE.en.md) · [中文使用说明](docs/USER_GUIDE.zh-CN.md) · [Windows build guide](app/windows/README.md)
 
 Click a screenshot to view the full-resolution original. Dictionaries and reading materials shown are examples and are not bundled with the app; AI output is an example, not a guaranteed answer.
 
@@ -77,7 +77,7 @@ Word document example: AI interprets “human touch” as a personal or human qu
 - Local history, favorites, review records, and learning-data export/restore.
 - A choice between exiting when the main window closes or continuing in the Windows system tray / macOS menu bar.
 
-The Windows and macOS build 94 packages share [one Release page](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build94); choose your platform by the asset filename. Windows build 96 adds a shared multi-chunk index cache with a total 64 MiB budget for main-window and popup lookup, while retaining the existing index format. The published macOS package remains on build 94. The macOS reader provides Copy/Lookup for selections and direct lookup on double-click. Both popups preserve original queries and offer related forms; explicit form switching updates titles, favorites and main-window lookup.
+The Windows and macOS build 96 packages share [one Release page](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build96); choose your platform by the asset filename. Desktop build 96 adds a shared multi-chunk index cache with a total 64 MiB budget for main-window and popup lookup, while retaining the existing index format. The macOS reader provides Copy/Lookup for selections and direct lookup on double-click. Both popups preserve original queries and offer related forms; explicit form switching updates titles, favorites and main-window lookup.
 
 ## Quick start
 

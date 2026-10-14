@@ -1,4 +1,4 @@
-LumaLex Desktop 0.1.0 build 94 — macOS
+LumaLex Desktop 0.1.0 build 96 — macOS
 
 安装：将 LumaLex.app 拖到“应用程序”，从那里运行。
 需要 macOS 12+。Universal 包包含 Apple Silicon 与 Intel 架构；

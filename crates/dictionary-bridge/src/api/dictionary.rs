@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use dictionary_core::{
-    DictionaryId, DictionaryResource as CoreDictionaryResource, DictionarySource, MdictDictionary,
-    KEY_INDEX_REVISION,
+    DictionaryId, DictionaryResource as CoreDictionaryResource, DictionarySource, IndexChunkCache,
+    KeyIndexOptions, MdictDictionary, KEY_INDEX_REVISION,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -13,6 +13,16 @@ use std::time::UNIX_EPOCH;
 
 static DICTIONARY_CACHE: OnceLock<RwLock<HashMap<String, CachedDictionary>>> = OnceLock::new();
 static INDEX_CACHE_DIRECTORY: OnceLock<PathBuf> = OnceLock::new();
+static INDEX_CHUNK_CACHE: OnceLock<Arc<IndexChunkCache>> = OnceLock::new();
+
+fn shared_index_chunk_cache() -> Arc<IndexChunkCache> {
+    let maximum_bytes = if cfg!(any(target_os = "android", target_os = "ios")) {
+        8 * 1024 * 1024
+    } else {
+        64 * 1024 * 1024
+    };
+    Arc::clone(INDEX_CHUNK_CACHE.get_or_init(|| Arc::new(IndexChunkCache::new(maximum_bytes))))
+}
 // Incremented by every foreground lookup/resource request. Background index
 // construction captures an epoch and stops at the next parser checkpoint when
 // interactive work arrives.
@@ -177,9 +187,11 @@ fn open_dictionary(mdx_path: &str) -> Result<Arc<MdictDictionary>> {
 
     let opened = Arc::new(
         match INDEX_CACHE_DIRECTORY.get() {
-            Some(directory) => {
-                MdictDictionary::open_with_key_index(source, key_index_path(directory, mdx_path))
-            }
+            Some(directory) => MdictDictionary::open_with_key_index_options(
+                source,
+                key_index_path(directory, mdx_path),
+                KeyIndexOptions::new().with_chunk_cache(shared_index_chunk_cache()),
+            ),
             None => MdictDictionary::open(source),
         }
         .with_context(|| format!("could not open {mdx_path}"))?,

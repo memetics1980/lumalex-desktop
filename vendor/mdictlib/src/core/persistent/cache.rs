@@ -11,6 +11,7 @@ use super::{
 use crate::error::{Error, Result};
 use crate::format::common::checksum::adler32;
 use crate::index::{KeyIndexOptions, KeyIndexRejection, KeyIndexSourceIdentity};
+use crate::index_cache::{CacheKey, CacheOwner, CachedChunk};
 use crate::limits::{
     MemoryBudget, MemoryReservation, checked_usize, ensure_u64_ceiling, ensure_usize_limit,
     try_reserve_vec,
@@ -118,6 +119,20 @@ impl VerifiedChunk {
     }
 }
 
+enum ChunkBytes<'a> {
+    Local(&'a [u8]),
+    Shared(Arc<CachedChunk>),
+}
+impl std::ops::Deref for ChunkBytes<'_> {
+    type Target = [u8];
+    fn deref(&self) -> &[u8] {
+        match self {
+            Self::Local(bytes) => bytes,
+            Self::Shared(chunk) => &chunk.bytes,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct IndexBytes {
     bytes: Vec<u8>,
@@ -162,6 +177,7 @@ pub(crate) struct PersistentKeyIndex {
     _cache_memory: MemoryReservation,
     max_row_bytes: usize,
     checksum_policy: ChecksumPolicy,
+    shared_cache: Option<CacheOwner>,
 }
 
 impl std::fmt::Debug for PersistentKeyIndex {
@@ -218,12 +234,15 @@ impl PersistentKeyIndex {
             u64::from(header.chunk_bytes),
             "persistent key-index chunk cache",
         )?;
-        let chunk_cache_bytes =
+        let chunk_cache_bytes = if options.chunk_cache.is_some() {
+            0
+        } else {
             chunk_bytes
                 .checked_mul(SECTION_COUNT)
                 .ok_or(Error::InvalidFormat(
                     "persistent key-index chunk cache size overflow",
-                ))?;
+                ))?
+        };
         let checksum_table_bytes = header
             .checksum_count
             .checked_mul(4)
@@ -247,6 +266,9 @@ impl PersistentKeyIndex {
             .reserve(cache_bytes, "persistent key-index chunk cache")?;
         let mut chunk_cache = std::array::from_fn(|_| VerifiedChunk::new());
         for slot in &mut chunk_cache {
+            if options.chunk_cache.is_some() {
+                continue;
+            }
             try_reserve_vec(
                 &mut slot.bytes,
                 chunk_bytes,
@@ -269,6 +291,19 @@ impl PersistentKeyIndex {
             _cache_memory: cache_memory,
             max_row_bytes: dictionary.limits.decompressed_block_bytes,
             checksum_policy: options.checksum_policy,
+            shared_cache: options
+                .chunk_cache
+                .as_ref()
+                .map(|cache| {
+                    cache.owner(
+                        dictionary
+                            .limits
+                            .working_memory_bytes
+                            .saturating_sub(dictionary.memory.used())
+                            / 8,
+                    )
+                })
+                .transpose()?,
         })
     }
 
@@ -281,7 +316,7 @@ impl PersistentKeyIndex {
         cache: &'a mut [VerifiedChunk; SECTION_COUNT],
         section: SectionKind,
         chunk: u64,
-    ) -> Result<&'a [u8]> {
+    ) -> Result<ChunkBytes<'a>> {
         let descriptor = self.section(section);
         if chunk >= descriptor.checksum_count {
             return Err(reject(KeyIndexRejection::InvalidLayout(
@@ -310,13 +345,53 @@ impl PersistentKeyIndex {
             .checked_add(relative)
             .ok_or_else(|| reject(KeyIndexRejection::InvalidLayout("chunk offset overflow")))?;
         let len = checked_usize(len, "persistent key-index chunk length")?;
+        if let Some(owner) = self.shared_cache.as_ref() {
+            let key = CacheKey {
+                owner: owner.id,
+                section: section.index(),
+                chunk,
+            };
+            if let Some(bytes) = owner.cache.get(key)? {
+                return Ok(ChunkBytes::Shared(bytes));
+            }
+            let memory = match self.memory.reserve(len, "shared index chunk") {
+                Ok(memory) => memory,
+                Err(Error::LimitExceeded {
+                    limit: "working_memory_bytes",
+                    ..
+                }) => {
+                    // Retention must never starve this source's parser budget.
+                    owner.cache.remove_owner(owner.id)?;
+                    self.memory.reserve(len, "shared index chunk")?
+                }
+                Err(error) => return Err(error),
+            };
+            let bytes = self.source.read_exact(offset, len)?;
+            if let Some(expected) = expected {
+                let actual = adler32(&bytes);
+                if expected != actual {
+                    return Err(reject(KeyIndexRejection::ChecksumMismatch {
+                        section: section.name(),
+                        chunk: Some(chunk),
+                        expected,
+                        actual,
+                    }));
+                }
+            }
+            return Ok(ChunkBytes::Shared(owner.cache.insert(
+                key,
+                bytes,
+                memory,
+                owner.maximum_source_bytes,
+            )?));
+        }
         let slot = cache.get_mut(section.index()).ok_or_else(|| {
             reject(KeyIndexRejection::InvalidLayout(
                 "chunk cache section is out of range",
             ))
         })?;
         if slot.number == Some(chunk) && slot.bytes.len() == len {
-            return Ok(&slot.bytes);
+            return Ok(ChunkBytes::Local(&slot.bytes));
         }
         slot.number = None;
         slot.bytes.resize(len, 0);
@@ -334,7 +409,7 @@ impl PersistentKeyIndex {
             }
         }
         slot.number = Some(chunk);
-        Ok(&slot.bytes)
+        Ok(ChunkBytes::Local(&slot.bytes))
     }
 
     pub(super) fn expected_checksum(&self, index: u64) -> Result<u32> {

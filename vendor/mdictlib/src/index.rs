@@ -40,6 +40,7 @@ pub struct KeyIndexOptions {
     pub(crate) chunk_bytes: usize,
     pub(crate) scratch_directory: Option<PathBuf>,
     pub(crate) checksum_policy: ChecksumPolicy,
+    pub(crate) chunk_cache: Option<Arc<crate::IndexChunkCache>>,
 }
 
 impl KeyIndexOptions {
@@ -52,6 +53,7 @@ impl KeyIndexOptions {
             chunk_bytes: DEFAULT_CHUNK_BYTES,
             scratch_directory: None,
             checksum_policy: ChecksumPolicy::Skip,
+            chunk_cache: None,
         }
     }
 
@@ -75,8 +77,9 @@ impl KeyIndexOptions {
 
     /// Sets the section-chunk length used by the persistent artifact.
     ///
-    /// An open index retains at most one chunk buffer per section; those
-    /// buffers are charged to the originating dictionary memory budget.
+    /// Without a shared cache an open index retains one chunk per section.
+    /// With [`Self::with_chunk_cache`], retention is governed by that pool;
+    /// chunk payloads remain charged to the source dictionary's budget.
     pub const fn with_chunk_bytes(mut self, value: usize) -> Self {
         self.chunk_bytes = value;
         self
@@ -100,6 +103,14 @@ impl KeyIndexOptions {
     #[must_use]
     pub const fn with_checksum_policy(mut self, checksum_policy: ChecksumPolicy) -> Self {
         self.checksum_policy = checksum_policy;
+        self
+    }
+
+    /// Shares a bounded validated-chunk cache with other independently opened
+    /// indexes. Without this option the original single-chunk-per-section
+    /// policy is retained. This changes no index bytes or checksum settings.
+    pub fn with_chunk_cache(mut self, cache: Arc<crate::IndexChunkCache>) -> Self {
+        self.chunk_cache = Some(cache);
         self
     }
 

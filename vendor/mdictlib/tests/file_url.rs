@@ -16,8 +16,15 @@ use support::{FixtureBuilder, TempDictionary};
 
 /// The same file, addressed as a picker would address it.
 fn file_url(dictionary: &TempDictionary) -> PathBuf {
-    let path = dictionary.path().to_str().expect("a UTF-8 temporary path");
-    PathBuf::from(format!("file://{path}"))
+    let path = dictionary
+        .path()
+        .to_str()
+        .expect("a UTF-8 temporary path")
+        .replace('\\', "/");
+    // Windows drive paths need the third slash and URL separators. A Unix
+    // absolute path already contributes that slash; no decoder rule changes.
+    let leading = if path.starts_with('/') { "" } else { "/" };
+    PathBuf::from(format!("file://{leading}{path}"))
 }
 
 #[test]
@@ -62,7 +69,7 @@ fn a_percent_escaped_name_opens_the_file_it_names() {
         .build()
         .write("file url with spaces");
     let path = dictionary.path().to_str().expect("a UTF-8 temporary path");
-    let escaped = PathBuf::from(format!("file://{}", path.replace(' ', "%20")));
+    let escaped = PathBuf::from(file_url(&dictionary).to_str().unwrap().replace(' ', "%20"));
 
     assert!(
         path.contains(' '),

@@ -32,6 +32,7 @@ mod core;
 mod error;
 mod format;
 mod index;
+mod index_cache;
 mod limits;
 mod lookup;
 mod mdd;
@@ -48,6 +49,7 @@ pub use index::{
     KEY_INDEX_REVISION, KeyIndex, KeyIndexBuild, KeyIndexOptions, KeyIndexRejection,
     KeyIndexSourceIdentity,
 };
+pub use index_cache::{IndexChunkCache, IndexChunkCacheUsage};
 pub use lookup::{KeyMatchPage, KeyMatches, MatchBasis};
 pub use mdd::{MddFile, MddResource, MddResourceSpan};
 pub use mdx::{MdxEntry, MdxFile};

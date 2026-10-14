@@ -9,7 +9,7 @@ mod mdict;
 mod model;
 
 pub use mdict::MdictDictionary;
-pub use mdictlib::KEY_INDEX_REVISION;
+pub use mdictlib::{IndexChunkCache, KeyIndexOptions, KEY_INDEX_REVISION};
 pub use model::{
     Article, DictionaryError, DictionaryId, DictionaryMetadata, DictionaryResource,
     DictionarySource, LookupResult,

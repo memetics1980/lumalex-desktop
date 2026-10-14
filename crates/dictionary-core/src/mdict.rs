@@ -29,6 +29,7 @@ pub struct MdictDictionary {
     key_index: RwLock<Option<KeyIndex>>,
     key_index_path: Option<PathBuf>,
     key_index_build: Mutex<()>,
+    key_index_options: KeyIndexOptions,
 }
 
 impl MdictDictionary {
@@ -36,7 +37,7 @@ impl MdictDictionary {
     const MAX_LINK_REDIRECTS: usize = 16;
 
     pub fn open(source: DictionarySource) -> Result<Self, DictionaryError> {
-        Self::open_internal(source, None)
+        Self::open_internal(source, None, KeyIndexOptions::new())
     }
 
     /// Opens a dictionary and reuses a valid application-owned persistent key
@@ -47,12 +48,22 @@ impl MdictDictionary {
         source: DictionarySource,
         key_index_path: PathBuf,
     ) -> Result<Self, DictionaryError> {
-        Self::open_internal(source, Some(key_index_path))
+        Self::open_internal(source, Some(key_index_path), KeyIndexOptions::new())
+    }
+
+    /// Opens an index with caller-owned cache and validation options.
+    pub fn open_with_key_index_options(
+        source: DictionarySource,
+        key_index_path: PathBuf,
+        options: KeyIndexOptions,
+    ) -> Result<Self, DictionaryError> {
+        Self::open_internal(source, Some(key_index_path), options)
     }
 
     fn open_internal(
         source: DictionarySource,
         key_index_path: Option<PathBuf>,
+        options: KeyIndexOptions,
     ) -> Result<Self, DictionaryError> {
         let mdx = MdxFile::open(&source.mdx_path).map_err(|error| DictionaryError::Open {
             path: source.mdx_path.clone(),
@@ -60,8 +71,7 @@ impl MdictDictionary {
         })?;
         let key_index = key_index_path.as_ref().and_then(|path| {
             let identity = mdx.key_index_source_identity().ok()?;
-            mdx.open_key_index(path, &identity, &KeyIndexOptions::new())
-                .ok()
+            mdx.open_key_index(path, &identity, &options).ok()
         });
 
         Ok(Self {
@@ -71,6 +81,7 @@ impl MdictDictionary {
             key_index: RwLock::new(key_index),
             key_index_path,
             key_index_build: Mutex::new(()),
+            key_index_options: options,
         })
     }
 
@@ -107,12 +118,12 @@ impl MdictDictionary {
             return Ok(false);
         }
 
-        let options = KeyIndexOptions::new();
+        let options = &self.key_index_options;
         let identity = self
             .mdx
             .key_index_source_identity()
             .map_err(|error| index_error(index_path, error))?;
-        if let Ok(index) = self.mdx.open_key_index(index_path, &identity, &options) {
+        if let Ok(index) = self.mdx.open_key_index(index_path, &identity, options) {
             self.store_key_index(index_path, index)?;
             return Ok(false);
         }
@@ -126,7 +137,7 @@ impl MdictDictionary {
             index_path.with_extension(format!("building-{}-{sequence}", std::process::id()));
         let build_result = self
             .mdx
-            .build_key_index_to_path(&temp_path, &options, cancelled);
+            .build_key_index_to_path(&temp_path, options, cancelled);
         if let Err(error) = build_result {
             let _ = fs::remove_file(&temp_path);
             return Err(index_error(index_path, error));
@@ -153,7 +164,7 @@ impl MdictDictionary {
 
         let index = self
             .mdx
-            .open_key_index(index_path, &identity, &options)
+            .open_key_index(index_path, &identity, options)
             .map_err(|error| index_error(index_path, error))?;
         self.store_key_index(index_path, index)?;
         Ok(true)

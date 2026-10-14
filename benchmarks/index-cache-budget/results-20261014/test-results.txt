@@ -1,0 +1,7 @@
+Parser: 224 passed, 0 failed, 3 optional ignored
+Rust workspace: 12 passed, 0 failed, 0 optional ignored
+Total: 236 passed, 0 failed, 3 optional ignored
+Persistent-index behavioral and corruption cases exercise both legacy and shared policies.
+Format checks and git diff whitespace checks passed.
+Real dictionaries: 16; sampled queries per dictionary: 300; output variants: legacy, 8MiB, 64MiB.
+Source/header/normalization revisions unchanged: f3-p1-n1.

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../services/ai_proxy.dart';
+
 import '../app_version.dart';
 import 'dart:io';
 import '../platform/desktop_platform.dart';
@@ -23,6 +25,9 @@ class AppSettingsPage extends StatelessWidget {
     required this.screenLookupAiBaseUrlController,
     required this.screenLookupAiModelController,
     required this.screenLookupAiApiKeyController,
+    required this.screenLookupAiProxyMode,
+    required this.screenLookupAiProxyAddressController,
+    required this.onScreenLookupAiProxyModeChanged,
     required this.onScreenLookupAiEnabledChanged,
     required this.onSaveScreenLookupAiSettings,
     required this.onTestScreenLookupAiSettings,
@@ -59,6 +64,9 @@ class AppSettingsPage extends StatelessWidget {
   final TextEditingController screenLookupAiBaseUrlController;
   final TextEditingController screenLookupAiModelController;
   final TextEditingController screenLookupAiApiKeyController;
+  final AiProxyMode screenLookupAiProxyMode;
+  final TextEditingController screenLookupAiProxyAddressController;
+  final ValueChanged<AiProxyMode> onScreenLookupAiProxyModeChanged;
   final ValueChanged<bool> onScreenLookupAiEnabledChanged;
   final VoidCallback onSaveScreenLookupAiSettings;
   final VoidCallback onTestScreenLookupAiSettings;
@@ -278,6 +286,56 @@ class AppSettingsPage extends StatelessWidget {
                           ],
                         );
                       },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<AiProxyMode>(
+                      key: const ValueKey('screen-lookup-ai-proxy-mode'),
+                      initialValue: screenLookupAiProxyMode,
+                      decoration: const InputDecoration(
+                        labelText: 'AI 网络连接方式',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                            value: AiProxyMode.system, child: Text('跟随系统代理')),
+                        DropdownMenuItem(
+                            value: AiProxyMode.manual,
+                            child: Text('手动 HTTP／混合代理')),
+                        DropdownMenuItem(
+                            value: AiProxyMode.direct,
+                            child: Text('直连（不使用应用层代理）')),
+                      ],
+                      onChanged: screenLookupAiSaving
+                          ? null
+                          : (mode) {
+                              if (mode != null) {
+                                onScreenLookupAiProxyModeChanged(mode);
+                              }
+                            },
+                    ),
+                    if (screenLookupAiProxyMode == AiProxyMode.manual) ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        key: const ValueKey('screen-lookup-ai-proxy-address'),
+                        controller: screenLookupAiProxyAddressController,
+                        enabled: !screenLookupAiSaving,
+                        keyboardType: TextInputType.url,
+                        autocorrect: false,
+                        decoration: const InputDecoration(
+                          labelText: 'HTTP／混合代理地址',
+                          hintText: 'http://127.0.0.1:7890',
+                          helperText: '端口以代理软件显示为准，不要填写 SOCKS 端口。',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Text(
+                      '测试连接使用当前填写的配置；保存后用于浮窗 AI。系统 PAC 或仅 SOCKS 代理请改用手动 HTTP／混合端口；本机 AI 服务始终直连。',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: colors.onSurfaceVariant),
                     ),
                     const SizedBox(height: 12),
                     Wrap(

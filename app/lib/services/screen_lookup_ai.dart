@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'ai_proxy.dart';
+
 const defaultScreenLookupAiBaseUrl = 'https://openrouter.ai/api/v1';
 
 final class ScreenLookupAiSettings {
@@ -9,11 +11,15 @@ final class ScreenLookupAiSettings {
     this.enabled = false,
     this.baseUrl = defaultScreenLookupAiBaseUrl,
     this.model = '',
+    this.proxyMode = AiProxyMode.system,
+    this.proxyAddress = '',
   });
 
   final bool enabled;
   final String baseUrl;
   final String model;
+  final AiProxyMode proxyMode;
+  final String proxyAddress;
 
   bool configured({required bool apiKeyPresent}) =>
       enabled &&
@@ -127,13 +133,17 @@ ScreenLookupAiResult parseScreenLookupAiContent(String content) {
 }
 
 final class ScreenLookupAiClient {
-  ScreenLookupAiClient({HttpClient Function()? createClient})
-      : _createClient = createClient ?? HttpClient.new;
+  ScreenLookupAiClient({
+    HttpClient Function()? createClient,
+    AiProxyResolver? proxyResolver,
+  })  : _createClient = createClient ?? HttpClient.new,
+        _proxyResolver = proxyResolver ?? AiProxyResolver();
 
   static const _timeout = Duration(seconds: 25);
   static const _maximumResponseBytes = 512 * 1024;
 
   final HttpClient Function() _createClient;
+  final AiProxyResolver _proxyResolver;
 
   Future<ScreenLookupAiResult> analyze({
     required ScreenLookupAiSettings settings,
@@ -155,56 +165,42 @@ final class ScreenLookupAiClient {
     final endpoint = screenLookupAiEndpoint(settings.baseUrl);
     final client = _createClient()
       ..connectionTimeout = const Duration(seconds: 10);
+    var route = '代理配置';
     try {
-      final request = await client.postUrl(endpoint).timeout(_timeout);
-      request
-        ..followRedirects = false
-        ..headers
-            .set(HttpHeaders.authorizationHeader, 'Bearer ${apiKey.trim()}')
-        ..headers.set(HttpHeaders.contentTypeHeader, 'application/json')
-        ..headers.set(HttpHeaders.acceptHeader, 'application/json')
-        ..headers.set(
-            HttpHeaders.userAgentHeader, 'LumaLex/${Platform.operatingSystem}');
-      request.add(
-        utf8.encode(
-          jsonEncode(<String, Object>{
-            'model': settings.model.trim(),
-            'temperature': 0.1,
-            'max_tokens': 420,
-            'messages': <Map<String, String>>[
-              const <String, String>{
-                'role': 'system',
-                'content':
-                    '''You are a contextual dictionary assistant. Determine only the meaning used in the supplied context. Do not invent facts. Return one JSON object and no markdown with exactly these string fields: lemma, partOfSpeech, englishMeaning, chineseMeaning, evidence, confidence, ambiguityNote. evidence must quote a short phrase from the supplied context. confidence must be high, medium, or low. If context is insufficient, explain that in ambiguityNote and use low confidence.''',
-              },
-              <String, String>{
-                'role': 'user',
-                'content': jsonEncode(<String, String>{
-                  'selectedWord': cleanWord,
-                  'context': cleanContext,
-                }),
-              },
-            ],
-          }),
-        ),
+      final directive = await _proxyResolver.resolve(
+        endpoint,
+        settings.proxyMode,
+        settings.proxyAddress,
       );
-      final response = await request.close().timeout(_timeout);
-      final bytes = <int>[];
-      await for (final chunk in response.timeout(_timeout)) {
-        bytes.addAll(chunk);
-        if (bytes.length > _maximumResponseBytes) {
-          throw const ScreenLookupAiException('AI 响应过大，已停止读取。');
-        }
+      route = directive == 'DIRECT' ? '直连' : 'HTTP 代理';
+      client.findProxy = (_) => directive;
+      final payload = <String, Object>{
+        'model': settings.model.trim(),
+        'max_completion_tokens': 4096,
+        'messages': <Map<String, String>>[
+          const <String, String>{
+            'role': 'system',
+            'content':
+                '''You are a contextual dictionary assistant. Determine only the meaning used in the supplied context. Do not invent facts. Return one JSON object and no markdown with exactly these string fields: lemma, partOfSpeech, englishMeaning, chineseMeaning, evidence, confidence, ambiguityNote. evidence must quote a short phrase from the supplied context. confidence must be high, medium, or low. If context is insufficient, explain that in ambiguityNote and use low confidence.''',
+          },
+          <String, String>{
+            'role': 'user',
+            'content': jsonEncode(<String, String>{
+              'selectedWord': cleanWord,
+              'context': cleanContext,
+            }),
+          },
+        ],
+      };
+      var response = await _postCompletion(client, endpoint, apiKey, payload);
+      // Retry only an explicit parameter rejection, never authentication,
+      // quota, network errors, or a completion that may already be billable.
+      if (_requiresLegacyTokenLimit(response.statusCode, response.body)) {
+        payload.remove('max_completion_tokens');
+        payload['max_tokens'] = 420;
+        response = await _postCompletion(client, endpoint, apiKey, payload);
       }
-      final responseText = utf8.decode(bytes, allowMalformed: true);
-      Object? body;
-      try {
-        body = jsonDecode(responseText);
-      } on FormatException {
-        throw ScreenLookupAiException(
-          'AI 接口返回了无法识别的响应（HTTP ${response.statusCode}）。',
-        );
-      }
+      final body = response.body;
       if (response.statusCode < 200 || response.statusCode >= 300) {
         var message = 'AI 请求失败（HTTP ${response.statusCode}）。';
         if (body is Map<Object?, Object?>) {
@@ -224,21 +220,114 @@ final class ScreenLookupAiClient {
       if (choices.isEmpty || choices.first is! Map<Object?, Object?>) {
         throw const ScreenLookupAiException('AI 接口没有返回分析结果。');
       }
-      final message = (choices.first as Map<Object?, Object?>)['message'];
+      final choice = choices.first as Map<Object?, Object?>;
+      if (choice['finish_reason'] == 'length') {
+        throw const ScreenLookupAiException(
+          '模型已达到输出或推理长度上限，未返回完整释义。请使用推理开销较低的模型后重试。',
+        );
+      }
+      final message = choice['message'];
       if (message is! Map<Object?, Object?> || message['content'] is! String) {
         throw const ScreenLookupAiException('AI 接口没有返回文本内容。');
       }
       return parseScreenLookupAiContent(message['content'] as String);
     } on ScreenLookupAiException {
       rethrow;
+    } on AiProxyException catch (error) {
+      throw ScreenLookupAiException(error.message);
     } on TimeoutException {
-      throw const ScreenLookupAiException('AI 请求超时，请检查网络或模型配置。');
+      throw ScreenLookupAiException('AI 请求超时（$route），请检查代理端口、网络或模型配置。');
     } on SocketException catch (error) {
-      throw ScreenLookupAiException('无法连接 AI 服务：${error.message}');
+      throw ScreenLookupAiException(
+          '无法连接 AI 服务（$route）：${error.message}。请检查代理软件是否运行及 HTTP／混合端口是否正确。');
+    } on HttpException {
+      throw ScreenLookupAiException(
+          'AI HTTP 连接失败（$route），请检查代理是否支持 HTTP CONNECT、端口是否正确，以及是否要求代理认证。');
     } on HandshakeException {
       throw const ScreenLookupAiException('AI 服务的 HTTPS 证书验证失败。');
     } finally {
       client.close(force: true);
+    }
+  }
+
+  static bool _requiresLegacyTokenLimit(int status, Object? body) {
+    if ((status != 400 && status != 422) || body is! Map<Object?, Object?>) {
+      return false;
+    }
+    final error = body['error'];
+    final details = error is Map<Object?, Object?> ? error : body;
+    final messageValue = details['message'];
+    final message = messageValue is String ? messageValue.toLowerCase() : '';
+    // A suggested replacement can also appear in the error text. Only act on
+    // the rejected parameter, rather than mistaking that suggestion for one.
+    final parameter = details['param'];
+    if (parameter != null && parameter != 'max_completion_tokens') return false;
+    final namedParameter = RegExp(
+      r'''(?:unsupported|unknown|unrecognized)\s+(?:request\s+)?(?:parameter|argument)(?:\s+supplied)?\s*:\s*['"]?([a-z_]+)''',
+    ).firstMatch(message)?.group(1);
+    if (namedParameter != null && namedParameter != 'max_completion_tokens') {
+      return false;
+    }
+
+    if (details['param'] == 'max_completion_tokens' &&
+        const [
+          'unsupported_parameter',
+          'unknown_parameter',
+          'unrecognized_parameter'
+        ].contains(details['code'])) {
+      return true;
+    }
+    return message.contains('max_completion_tokens') &&
+        const [
+          'not supported',
+          'unsupported',
+          'unknown',
+          'unrecognized',
+          'not permitted',
+          'not allowed',
+          'unexpected keyword',
+          '不支持',
+          '未知参数'
+        ].any(message.contains);
+  }
+
+  Future<({int statusCode, Object? body})> _postCompletion(
+    HttpClient client,
+    Uri endpoint,
+    String apiKey,
+    Map<String, Object> payload,
+  ) async {
+    final request = await client.postUrl(endpoint).timeout(_timeout);
+    request
+      ..followRedirects = false
+      ..headers.set(HttpHeaders.authorizationHeader, 'Bearer ${apiKey.trim()}')
+      ..headers.set(HttpHeaders.contentTypeHeader, 'application/json')
+      ..headers.set(HttpHeaders.acceptHeader, 'application/json')
+      ..headers.set(
+          HttpHeaders.userAgentHeader, 'LumaLex/${Platform.operatingSystem}');
+    request.add(utf8.encode(jsonEncode(payload)));
+    final response = await request.close().timeout(_timeout);
+    final bytes = <int>[];
+    await for (final chunk in response.timeout(_timeout)) {
+      bytes.addAll(chunk);
+      if (bytes.length > _maximumResponseBytes) {
+        throw const ScreenLookupAiException('AI 响应过大，已停止读取。');
+      }
+    }
+    if (response.statusCode == HttpStatus.proxyAuthenticationRequired) {
+      throw const ScreenLookupAiException(
+        '代理要求身份验证（HTTP 407），请使用无需认证的本机 HTTP／混合代理端口。',
+      );
+    }
+    try {
+      return (
+        statusCode: response.statusCode,
+        body: jsonDecode(utf8.decode(bytes, allowMalformed: true))
+      );
+    } on FormatException {
+      throw ScreenLookupAiException(
+        'AI 接口返回了无法识别的响应（HTTP ${response.statusCode}）。',
+      );
     }
   }
 }

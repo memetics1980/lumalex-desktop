@@ -23,6 +23,8 @@ import 'package:local_dictionary/screens/home_page.dart';
 import 'package:local_dictionary/services/dictionary_engine.dart';
 import 'package:local_dictionary/services/dictionary_library.dart';
 import 'package:local_dictionary/services/word_records.dart';
+import 'package:local_dictionary/services/ai_proxy.dart';
+import 'package:local_dictionary/services/windows_app_settings.dart';
 
 void main() {
   setUp(() {
@@ -90,6 +92,66 @@ void main() {
     expect(find.text('导入第一本词典'), findsOneWidget);
   });
 
+  testWidgets('AI proxy editor saves manual and direct settings',
+      (tester) async {
+    for (final platform in ['windows', 'macos']) {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        MethodChannel('local_dictionary/${platform}_screen_lookup'),
+        (call) async => switch (call.method) {
+          'hasAccessibilityPermission' => true,
+          'loadAiApiKey' => 'test-key',
+          _ => null,
+        },
+      );
+    }
+    final settings = InMemoryWindowsAppSettingsStore(
+      screenLookupAiModel: 'test-model',
+    );
+    tester.view.physicalSize = const Size(1000, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(DictionaryApp(windowsAppSettings: settings));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('settings-navigation-button')));
+    await tester.pumpAndSettle();
+    final mode = find.byKey(const ValueKey('screen-lookup-ai-proxy-mode'));
+    await tester.ensureVisible(mode);
+    await tester.pumpAndSettle();
+    await tester.tap(mode);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('手动 HTTP／混合代理').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('screen-lookup-ai-proxy-address')),
+      'http://127.0.0.1:7890',
+    );
+    final save = find.byKey(const ValueKey('windows-screen-lookup-ai-save'));
+    await tester.ensureVisible(save);
+    await tester.pumpAndSettle();
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(settings.screenLookupAiProxyMode, AiProxyMode.manual);
+    expect(settings.screenLookupAiProxyAddress, 'http://127.0.0.1:7890');
+
+    await tester.ensureVisible(mode);
+    await tester.pumpAndSettle();
+    await tester.tap(mode);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('直连（不使用应用层代理）').last);
+    await tester.pumpAndSettle();
+    // Editing alone must not change the configuration used by popup AI.
+    expect(settings.screenLookupAiProxyMode, AiProxyMode.manual);
+    await tester.ensureVisible(save);
+    await tester.pumpAndSettle();
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(settings.screenLookupAiProxyMode, AiProxyMode.direct);
+    expect(find.byKey(const ValueKey('screen-lookup-ai-proxy-address')),
+        findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('macOS exposes desktop settings and dictionary groups',
       (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
@@ -103,9 +165,37 @@ void main() {
     expect(find.text('新建分组'), findsWidgets);
     await tester.tap(find.byKey(const ValueKey('settings-navigation-button')));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('windows-screen-lookup-toggle')),
+      250,
+      scrollable: find
+          .descendant(
+              of: find.byKey(const PageStorageKey<String>('settings-page')),
+              matching: find.byType(Scrollable))
+          .first,
+    );
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('windows-screen-lookup-toggle')),
         findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.textContaining('macOS 钥匙串'),
+      -150,
+      scrollable: find
+          .descendant(
+              of: find.byKey(const PageStorageKey<String>('settings-page')),
+              matching: find.byType(Scrollable))
+          .first,
+    );
     expect(find.textContaining('macOS 钥匙串'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('已获得辅助功能权限'),
+      150,
+      scrollable: find
+          .descendant(
+              of: find.byKey(const PageStorageKey<String>('settings-page')),
+              matching: find.byType(Scrollable))
+          .first,
+    );
     expect(find.text('已获得辅助功能权限'), findsOneWidget);
     expect(find.text('在 Finder 中显示当前应用'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -154,17 +244,25 @@ void main() {
     );
     expect(find.text('关闭主窗口时'), findsOneWidget);
     expect(find.text('隐藏到$desktopBackgroundLocation'), findsOneWidget);
-    expect(find.text('屏幕取词'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('windows-screen-lookup-toggle')),
-      findsOneWidget,
-    );
     expect(find.text('AI 语境释义'), findsOneWidget);
-    expect(find.textContaining('复制模式'), findsWidgets);
     expect(
       find.byKey(const ValueKey('windows-screen-lookup-ai-toggle')),
       findsOneWidget,
     );
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('windows-screen-lookup-toggle')),
+      250,
+      scrollable: find
+          .descendant(
+              of: find.byKey(const PageStorageKey<String>('settings-page')),
+              matching: find.byType(Scrollable))
+          .first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('屏幕取词'), findsOneWidget);
+    expect(find.textContaining('复制模式'), findsWidgets);
+    expect(find.byKey(const ValueKey('windows-screen-lookup-toggle')),
+        findsOneWidget);
     final shortcutControl =
         tester.widget<DropdownButtonFormField<WindowsScreenLookupShortcut>>(
       find.byKey(const ValueKey('windows-screen-lookup-shortcut')),

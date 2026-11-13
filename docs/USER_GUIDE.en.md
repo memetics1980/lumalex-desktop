@@ -141,6 +141,20 @@ Remote services require HTTPS. A local service may use an HTTP localhost or 127.
 
 Select a word in an application that provides context, press the lookup shortcut, and click AI in the popup. Enabling the feature or opening the popup does not automatically analyze the context. Testing the connection actively sends a sample request.
 
+### Proxies and connection problems
+
+These controls are included in macOS build 98. The currently published Windows build 96 does not include them.
+
+Under Settings → Contextual AI, choose the AI network connection mode (AI 网络连接方式):
+
+- **System proxy (跟随系统代理)**: reads the current Windows/macOS HTTP/HTTPS proxy settings, with support for process `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY` and `NO_PROXY` environment variables. System settings are reread for each request.
+- **Manual HTTP/mixed proxy (手动 HTTP／混合代理)**: enter the HTTP or mixed port shown in your proxy app, for example `http://127.0.0.1:7890`. The port is only an example. Do not use a SOCKS port or put this address in the API address field.
+- **Direct (直连)**: uses no application-level proxy. This can be appropriate when a TUN/virtual network adapter routes the traffic.
+
+Test connection uses the current editor values. After a successful test, save the configuration to apply it to popup AI requests. Local AI endpoints (localhost, 127.x.x.x, ::1) always connect directly. HTTPS API requests use HTTP CONNECT tunnels and retain server certificate verification.
+
+PAC scripts, WPAD discovery, SOCKS-only configurations, HTTPS proxy servers and authenticated proxies are not supported. Use an unauthenticated local HTTP/mixed port instead. If connection errors persist, check that the proxy app is running, the port is correct and its rules allow the API domain. HTTP 401/403, missing models or insufficient credit also require checking the provider configuration.
+
 ### Limits and privacy
 
 - Copy fallback has no context and cannot offer contextual AI. Check the capture mode before troubleshooting AI settings.

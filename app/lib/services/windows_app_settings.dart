@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../platform/windows_screen_lookup.dart';
 import 'screen_lookup_ai.dart';
+import 'ai_proxy.dart';
 
 enum WindowsCloseBehavior {
   exitApp,
@@ -43,6 +44,14 @@ abstract interface class WindowsAppSettingsStore {
   Future<String> loadScreenLookupAiModel();
 
   Future<void> saveScreenLookupAiModel(String model);
+
+  Future<AiProxyMode> loadScreenLookupAiProxyMode();
+
+  Future<void> saveScreenLookupAiProxyMode(AiProxyMode mode);
+
+  Future<String> loadScreenLookupAiProxyAddress();
+
+  Future<void> saveScreenLookupAiProxyAddress(String address);
 }
 
 class PreferencesWindowsAppSettingsStore implements WindowsAppSettingsStore {
@@ -62,6 +71,9 @@ class PreferencesWindowsAppSettingsStore implements WindowsAppSettingsStore {
       'local_dictionary.windows.screen_lookup_ai_base_url.v1';
   static const _screenLookupAiModelKey =
       'local_dictionary.windows.screen_lookup_ai_model.v1';
+
+  static const _aiProxyModeKey = 'local_dictionary.ai.proxy_mode.v1';
+  static const _aiProxyAddressKey = 'local_dictionary.ai.proxy_address.v1';
 
   final SharedPreferencesAsync _preferences;
 
@@ -127,6 +139,22 @@ class PreferencesWindowsAppSettingsStore implements WindowsAppSettingsStore {
   @override
   Future<void> saveScreenLookupAiModel(String model) =>
       _preferences.setString(_screenLookupAiModelKey, model);
+
+  @override
+  Future<AiProxyMode> loadScreenLookupAiProxyMode() async =>
+      aiProxyModeFromStorage(await _preferences.getString(_aiProxyModeKey));
+
+  @override
+  Future<void> saveScreenLookupAiProxyMode(AiProxyMode mode) =>
+      _preferences.setString(_aiProxyModeKey, mode.name);
+
+  @override
+  Future<String> loadScreenLookupAiProxyAddress() async =>
+      await _preferences.getString(_aiProxyAddressKey) ?? '';
+
+  @override
+  Future<void> saveScreenLookupAiProxyAddress(String address) =>
+      _preferences.setString(_aiProxyAddressKey, address);
 }
 
 class InMemoryWindowsAppSettingsStore implements WindowsAppSettingsStore {
@@ -138,6 +166,8 @@ class InMemoryWindowsAppSettingsStore implements WindowsAppSettingsStore {
     this.screenLookupAiEnabled = false,
     this.screenLookupAiBaseUrl = defaultScreenLookupAiBaseUrl,
     this.screenLookupAiModel = '',
+    this.screenLookupAiProxyMode = AiProxyMode.system,
+    this.screenLookupAiProxyAddress = '',
   });
 
   WindowsCloseBehavior closeBehavior;
@@ -147,6 +177,8 @@ class InMemoryWindowsAppSettingsStore implements WindowsAppSettingsStore {
   bool screenLookupAiEnabled;
   String screenLookupAiBaseUrl;
   String screenLookupAiModel;
+  AiProxyMode screenLookupAiProxyMode;
+  String screenLookupAiProxyAddress;
 
   @override
   Future<WindowsCloseBehavior> loadCloseBehavior() async => closeBehavior;
@@ -205,5 +237,23 @@ class InMemoryWindowsAppSettingsStore implements WindowsAppSettingsStore {
   @override
   Future<void> saveScreenLookupAiModel(String model) async {
     screenLookupAiModel = model;
+  }
+
+  @override
+  Future<AiProxyMode> loadScreenLookupAiProxyMode() async =>
+      screenLookupAiProxyMode;
+
+  @override
+  Future<void> saveScreenLookupAiProxyMode(AiProxyMode mode) async {
+    screenLookupAiProxyMode = mode;
+  }
+
+  @override
+  Future<String> loadScreenLookupAiProxyAddress() async =>
+      screenLookupAiProxyAddress;
+
+  @override
+  Future<void> saveScreenLookupAiProxyAddress(String address) async {
+    screenLookupAiProxyAddress = address;
   }
 }

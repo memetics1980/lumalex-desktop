@@ -42,6 +42,7 @@ import '../services/ios_dictionary_home.dart';
 import '../services/learning_data_transfer.dart';
 import '../services/reader_diagnostics.dart';
 import '../services/screen_lookup_ai.dart';
+import '../services/ai_proxy.dart';
 import '../services/word_records.dart';
 import '../services/windows_app_settings.dart';
 import 'aggregate_article_page.dart';
@@ -475,6 +476,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       TextEditingController(text: defaultScreenLookupAiBaseUrl);
   final _screenLookupAiModelController = TextEditingController();
   final _screenLookupAiApiKeyController = TextEditingController();
+  final _screenLookupAiProxyAddressController = TextEditingController();
+  AiProxyMode _screenLookupAiProxyMode = AiProxyMode.system;
+  AiProxyMode _savedAiProxyMode = AiProxyMode.system;
+  String _savedAiProxyAddress = '';
   bool _windowsScreenLookupAiEnabled = false;
   bool _windowsScreenLookupAiSaving = false;
   bool _windowsScreenLookupAiKeyStored = false;
@@ -580,6 +585,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _screenLookupAiBaseUrlController.dispose();
     _screenLookupAiModelController.dispose();
     _screenLookupAiApiKeyController.dispose();
+    _screenLookupAiProxyAddressController.dispose();
     super.dispose();
   }
 
@@ -687,6 +693,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         widget.windowsAppSettings.loadScreenLookupAiBaseUrl(),
         widget.windowsAppSettings.loadScreenLookupAiModel(),
         _loadWindowsScreenLookupAiApiKey(),
+        widget.windowsAppSettings.loadScreenLookupAiProxyMode(),
+        widget.windowsAppSettings.loadScreenLookupAiProxyAddress(),
       ]);
       if (!mounted) return;
       var closeBehavior = values[0] as WindowsCloseBehavior;
@@ -713,6 +721,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _windowsScreenLookupAiKeyStored = screenLookupAiApiKey.isNotEmpty;
         _screenLookupAiBaseUrlController.text = screenLookupAiBaseUrl;
         _screenLookupAiModelController.text = screenLookupAiModel;
+        _savedAiProxyMode = values[8] as AiProxyMode;
+        _screenLookupAiProxyMode = _savedAiProxyMode;
+        _savedAiProxyAddress = values[9] as String;
+        _screenLookupAiProxyAddressController.text = _savedAiProxyAddress;
       });
       await _refreshMacosAccessibilityPermission();
       await _applyWindowsCloseBehavior();
@@ -928,6 +940,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         enabled: enabled ?? _windowsScreenLookupAiEnabled,
         baseUrl: _screenLookupAiBaseUrlController.text.trim(),
         model: _screenLookupAiModelController.text.trim(),
+        proxyMode: _screenLookupAiProxyMode,
+        proxyAddress: _screenLookupAiProxyAddressController.text.trim(),
       );
 
   ScreenLookupAiSettings get _savedScreenLookupAiSettings =>
@@ -935,6 +949,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         enabled: _windowsScreenLookupAiEnabled,
         baseUrl: _windowsScreenLookupAiBaseUrl,
         model: _windowsScreenLookupAiModel,
+        proxyMode: _savedAiProxyMode,
+        proxyAddress: _savedAiProxyAddress,
       );
 
   bool get _screenLookupAiConfigured => _savedScreenLookupAiSettings.configured(
@@ -947,6 +963,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }) {
     if (!isAllowedScreenLookupAiBaseUrl(settings.baseUrl)) {
       return 'API 地址必须使用 HTTPS；本机服务可以使用 localhost 或 127.0.0.1。';
+    }
+    if (settings.proxyMode == AiProxyMode.manual ||
+        settings.proxyAddress.isNotEmpty) {
+      try {
+        httpAiProxyDirective(settings.proxyAddress);
+      } on AiProxyException catch (error) {
+        return error.message;
+      }
     }
     if (settings.model.isEmpty) return '请填写模型名称。';
     if (!apiKeyPresent) return '请填写并保存 API Key。';
@@ -1005,11 +1029,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       await Future.wait<void>([
         widget.windowsAppSettings.saveScreenLookupAiBaseUrl(settings.baseUrl),
         widget.windowsAppSettings.saveScreenLookupAiModel(settings.model),
+        widget.windowsAppSettings
+            .saveScreenLookupAiProxyMode(settings.proxyMode),
+        widget.windowsAppSettings
+            .saveScreenLookupAiProxyAddress(settings.proxyAddress),
       ]);
       if (!mounted) return;
       setState(() {
         _windowsScreenLookupAiBaseUrl = settings.baseUrl;
         _windowsScreenLookupAiModel = settings.model;
+        _savedAiProxyMode = settings.proxyMode;
+        _savedAiProxyAddress = settings.proxyAddress;
         if (typedApiKey.isNotEmpty) _windowsScreenLookupAiKeyStored = true;
         _screenLookupAiApiKeyController.clear();
       });
@@ -7253,6 +7283,12 @@ $articleHtml
         screenLookupAiBaseUrlController: _screenLookupAiBaseUrlController,
         screenLookupAiModelController: _screenLookupAiModelController,
         screenLookupAiApiKeyController: _screenLookupAiApiKeyController,
+        screenLookupAiProxyMode: _screenLookupAiProxyMode,
+        screenLookupAiProxyAddressController:
+            _screenLookupAiProxyAddressController,
+        onScreenLookupAiProxyModeChanged: (mode) {
+          setState(() => _screenLookupAiProxyMode = mode);
+        },
         onScreenLookupAiEnabledChanged: (enabled) {
           unawaited(_setWindowsScreenLookupAiEnabled(enabled));
         },

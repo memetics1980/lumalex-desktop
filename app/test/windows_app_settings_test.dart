@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:local_dictionary/platform/windows_window_lifecycle.dart';
 import 'package:local_dictionary/platform/windows_screen_lookup.dart';
 import 'package:local_dictionary/services/windows_app_settings.dart';
+import 'package:local_dictionary/services/ai_proxy.dart';
 
 void main() {
   test('unknown close behavior safely defaults to direct exit', () {
@@ -33,6 +34,8 @@ void main() {
     await store.saveScreenLookupAiEnabled(true);
     await store.saveScreenLookupAiBaseUrl('https://example.com/v1');
     await store.saveScreenLookupAiModel('context-model');
+    await store.saveScreenLookupAiProxyMode(AiProxyMode.manual);
+    await store.saveScreenLookupAiProxyAddress('http://127.0.0.1:7890');
 
     expect(
       await store.loadCloseBehavior(),
@@ -50,6 +53,9 @@ void main() {
       'https://example.com/v1',
     );
     expect(await store.loadScreenLookupAiModel(), 'context-model');
+    expect(await store.loadScreenLookupAiProxyMode(), AiProxyMode.manual);
+    expect(
+        await store.loadScreenLookupAiProxyAddress(), 'http://127.0.0.1:7890');
   });
 
   test('unknown screen lookup shortcut safely uses Ctrl Alt L', () {

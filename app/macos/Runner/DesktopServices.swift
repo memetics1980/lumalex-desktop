@@ -2,6 +2,7 @@ import Cocoa
 import Carbon
 import ApplicationServices
 import Security
+import CFNetwork
 import WebKit
 import FlutterMacOS
 
@@ -228,6 +229,29 @@ final class DesktopServices: NSObject, NSWindowDelegate, NSMenuItemValidation {
         popup.updateAI(args["payload"] as? String ?? "", pending: args["pending"] as? Bool ?? false)
         result(nil)
       case "loadAiApiKey": result(try DesktopKeychain.load())
+      case "getAiProxySettings":
+        guard let raw = args["url"] as? String, let url = URL(string: raw),
+              ["https", "http"].contains(url.scheme ?? ""),
+              let settings = CFNetworkCopySystemProxySettings()?.takeRetainedValue() else {
+          throw DesktopServiceError.message("proxy_read_failed", "无法读取系统代理。")
+        }
+        let proxies = CFNetworkCopyProxiesForURL(url as CFURL, settings).takeRetainedValue() as NSArray
+        guard let proxy = proxies.firstObject as? [String: Any],
+              let type = proxy[kCFProxyTypeKey as String] as? String else {
+          throw DesktopServiceError.message("proxy_read_failed", "无法读取系统代理。")
+        }
+        if type == kCFProxyTypeNone as String {
+          result(["direct": true])
+        } else if type == kCFProxyTypeHTTP as String || type == kCFProxyTypeHTTPS as String {
+          guard let host = proxy[kCFProxyHostNameKey as String] as? String,
+                let port = proxy[kCFProxyPortNumberKey as String] as? Int else {
+            throw DesktopServiceError.message("proxy_read_failed", "系统代理地址不完整。")
+          }
+          let authority = host.contains(":") && !host.hasPrefix("[") ? "[\(host)]" : host
+          result(["server": "http://\(authority):\(port)"])
+        } else {
+          result(["unsupported": type == kCFProxyTypeSOCKS as String ? "SOCKS" : "PAC 自动"])
+        }
       case "saveAiApiKey": try DesktopKeychain.save(args["apiKey"] as? String ?? ""); result(nil)
       case "deleteAiApiKey": try DesktopKeychain.delete(); result(nil)
       default: result(FlutterMethodNotImplemented)

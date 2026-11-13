@@ -4,6 +4,7 @@
 
 #include <wincred.h>
 #include <dwmapi.h>
+#include <winhttp.h>
 
 #include <limits>
 #include <optional>
@@ -248,6 +249,29 @@ void FlutterWindow::RegisterScreenLookupChannel() {
         const auto* arguments = ReadArguments(call);
         if (arguments == nullptr) {
           result->Error("invalid_arguments", "Missing screen lookup settings.");
+          return;
+        }
+        if (call.method_name() == "getAiProxySettings") {
+          WINHTTP_CURRENT_USER_IE_PROXY_CONFIG config{};
+          const bool loaded = WinHttpGetIEProxyConfigForCurrentUser(&config) != FALSE;
+          const DWORD error = loaded ? ERROR_SUCCESS : GetLastError();
+          flutter::EncodableMap settings;
+          settings[flutter::EncodableValue("server")] = flutter::EncodableValue(
+              config.lpszProxy ? Utf8FromUtf16(config.lpszProxy) : std::string());
+          settings[flutter::EncodableValue("bypass")] = flutter::EncodableValue(
+              config.lpszProxyBypass ? Utf8FromUtf16(config.lpszProxyBypass) : std::string());
+          // WPAD auto-detect is commonly enabled on otherwise direct networks.
+          // An explicit PAC URL needs manual configuration in this client.
+          settings[flutter::EncodableValue("autoConfig")] = flutter::EncodableValue(
+              config.lpszAutoConfigUrl != nullptr && config.lpszAutoConfigUrl[0] != L'\0');
+          if (config.lpszProxy) GlobalFree(config.lpszProxy);
+          if (config.lpszProxyBypass) GlobalFree(config.lpszProxyBypass);
+          if (config.lpszAutoConfigUrl) GlobalFree(config.lpszAutoConfigUrl);
+          if (!loaded && error != ERROR_FILE_NOT_FOUND) {
+            result->Error("proxy_read_failed", "Unable to read system proxy settings.");
+          } else {
+            result->Success(flutter::EncodableValue(settings));
+          }
           return;
         }
         if (call.method_name() == "setShortcutRecording") {

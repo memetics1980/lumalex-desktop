@@ -143,7 +143,9 @@ Select a word in an application that provides context, press the lookup shortcut
 
 ### Proxies and connection problems
 
-These controls are included in macOS build 98. The currently published Windows build 96 does not include them.
+These controls are included in Windows and macOS build 98.
+
+Windows build 98 validates API key formatting. Paste only the key itself, without labels, notes, spaces or line breaks. If an older version saved such extra text, enter the key alone, save it and test the connection again.
 
 Under Settings → Contextual AI, choose the AI network connection mode (AI 网络连接方式):
 

@@ -79,6 +79,17 @@ bool isAllowedScreenLookupAiBaseUrl(String value) {
       host.endsWith('.localhost');
 }
 
+String? validateScreenLookupAiApiKey(String value) {
+  final key = value.trim();
+  if (key.isEmpty) return '尚未配置 API Key。';
+  // A bearer credential is a single printable ASCII token. Reject pasted
+  // labels/newlines before HttpHeaders can throw an exception containing it.
+  if (key.codeUnits.any((unit) => unit < 0x21 || unit > 0x7e)) {
+    return 'API Key 格式不正确：请只粘贴密钥本身，不要包含说明文字、空格或换行。';
+  }
+  return null;
+}
+
 Uri screenLookupAiEndpoint(String baseUrl) {
   if (!isAllowedScreenLookupAiBaseUrl(baseUrl)) {
     throw const ScreenLookupAiException(
@@ -156,8 +167,9 @@ final class ScreenLookupAiClient {
     if (cleanWord.isEmpty || cleanContext.isEmpty) {
       throw const ScreenLookupAiException('没有读取到足够的上下文，无法判断本句义项。');
     }
-    if (apiKey.trim().isEmpty) {
-      throw const ScreenLookupAiException('尚未配置 API Key。');
+    final keyValidation = validateScreenLookupAiApiKey(apiKey);
+    if (keyValidation != null) {
+      throw ScreenLookupAiException(keyValidation);
     }
     if (settings.model.trim().isEmpty) {
       throw const ScreenLookupAiException('尚未配置模型名称。');

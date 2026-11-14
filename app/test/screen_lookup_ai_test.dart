@@ -7,6 +7,47 @@ import 'package:local_dictionary/screens/home_page.dart';
 import 'package:local_dictionary/services/screen_lookup_ai.dart';
 
 void main() {
+  test('API keys accept single tokens and reject pasted notes or controls', () {
+    expect(validateScreenLookupAiApiKey('  test-token_123  '), isNull);
+    expect(validateScreenLookupAiApiKey('  '), contains('尚未配置'));
+    for (final key in [
+      'OpenAI api\r\rsk-test-secret',
+      'sk-test\nsecret',
+      'API Key: sk-test-secret',
+      'sk-test\tsecret',
+      'sk-test\u0000secret',
+      'sk-test\u007fsecret',
+      '密钥sk-test-secret',
+    ]) {
+      final error = validateScreenLookupAiApiKey(key);
+      expect(error, contains('请只粘贴密钥本身'));
+      expect(error, isNot(contains('sk-test')));
+    }
+  });
+
+  test('malformed stored credentials fail safely before creating a connection',
+      () async {
+    var clientCreated = false;
+    final client = ScreenLookupAiClient(createClient: () {
+      clientCreated = true;
+      return HttpClient();
+    });
+    await expectLater(
+      client.analyze(
+        settings: const ScreenLookupAiSettings(
+            baseUrl: 'https://example.com/v1', model: 'test-model'),
+        apiKey: 'OpenAI api\r\rsk-test-secret',
+        word: 'offer',
+        context: 'They offer care.',
+      ),
+      throwsA(isA<ScreenLookupAiException>().having(
+          (error) => error.message,
+          'message',
+          allOf(contains('请只粘贴密钥本身'), isNot(contains('sk-test-secret'))))),
+    );
+    expect(clientCreated, isFalse);
+  });
+
   test('AI endpoint appends chat completions and preserves query parameters',
       () {
     expect(

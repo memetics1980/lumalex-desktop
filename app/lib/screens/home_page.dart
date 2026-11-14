@@ -974,6 +974,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
     if (settings.model.isEmpty) return '请填写模型名称。';
     if (!apiKeyPresent) return '请填写并保存 API Key。';
+    final typedKey = _screenLookupAiApiKeyController.text;
+    if (typedKey.trim().isNotEmpty) {
+      return validateScreenLookupAiApiKey(typedKey);
+    }
     return null;
   }
 
@@ -1107,7 +1111,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     } on ScreenLookupAiException catch (error) {
       _showMessage('连接测试失败：${error.message}');
     } catch (error) {
-      debugPrint('AI connection test failed: $error');
+      // Network/header exceptions may embed credentials; log only the type.
+      debugPrint('AI connection test failed: ${error.runtimeType}');
       _showMessage('连接测试失败。');
     } finally {
       if (mounted) setState(() => _windowsScreenLookupAiSaving = false);
@@ -1370,7 +1375,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         'message': error.message,
       });
     } catch (error) {
-      debugPrint('Screen lookup AI analysis failed: $error');
+      debugPrint('Screen lookup AI analysis failed: ${error.runtimeType}');
       if (request != _screenLookupAiRequest) return;
       await _publishScreenLookupAiPayload(const <String, Object?>{
         'status': 'error',

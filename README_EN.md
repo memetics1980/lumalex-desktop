@@ -4,7 +4,7 @@
 
 [简体中文](README.md) | [English](README_EN.md)
 
-[Gitee mirror and downloads](https://gitee.com/memetics/lumalex-desktop/releases): Windows build 96 and macOS build 98, with the same packages as GitHub and matching SHA-256 files.
+[Gitee mirror and downloads](https://gitee.com/memetics/lumalex-desktop/releases): Windows and macOS build 98, with the same packages as GitHub and matching SHA-256 files.
 
 Keep your dictionaries local, look up words without leaving your reading, and use AI to understand a word in context.
 
@@ -12,7 +12,7 @@ LumaLex is a desktop MDX/MDD dictionary reader built with Flutter and Rust. This
 
 | Platform | Download and status |
 | --- | --- |
-| Windows 10/11 x64 | [Windows portable build 96](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build98); extract the entire archive |
+| Windows 10/11 x64 | [Windows portable build 98](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build98); extract the entire archive |
 | macOS 12+ | [macOS build 98](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build98); DMG and ZIP available |
 
 The macOS package is Universal (Apple Silicon / Intel). It has been tested on Apple Silicon; Intel hardware has not yet been tested. This preview is ad-hoc signed, without Developer ID signing or Apple notarization, so first launch may require confirmation in System Settings. Both hosts share settings, dictionary navigation and popup content. macOS supports menu-bar persistence, global lookup shortcuts, accessibility-based selection/context capture, Keychain and contextual AI. Capture depends on the source app. Screenshots below show Windows.
@@ -77,9 +77,9 @@ Word document example: AI interprets “human touch” as a personal or human qu
 - Local history, favorites, review records, and learning-data export/restore.
 - A choice between exiting when the main window closes or continuing in the Windows system tray / macOS menu bar.
 
-The Windows build 96 and macOS build 98 packages share [one Release page](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build98); choose your platform by the asset filename. Desktop build 96 adds a shared multi-chunk index cache with a total 64 MiB budget for main-window and popup lookup, while retaining the existing index format. The macOS reader provides Copy/Lookup for selections and direct lookup on double-click. Both popups preserve original queries and offer related forms; explicit form switching updates titles, favorites and main-window lookup.
+The Windows and macOS build 98 packages share [one Release page](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build98); choose your platform by the asset filename. Desktop build 96 adds a shared multi-chunk index cache with a total 64 MiB budget for main-window and popup lookup, while retaining the existing index format. The macOS reader provides Copy/Lookup for selections and direct lookup on double-click. Both popups preserve original queries and offer related forms; explicit form switching updates titles, favorites and main-window lookup.
 
-macOS build 98 fixes AI connectivity with system HTTP proxy, manual HTTP/mixed proxy and direct modes shared by connection testing and popup AI. It improves model parameter compatibility and explains output/reasoning length limits. PAC, WPAD, SOCKS-only and authenticated proxies are not supported; use an unauthenticated local HTTP/mixed port instead. Windows continues to use the original build 96 package, without these proxy and parameter fixes; the new Windows source has not been built or validated on a local Windows machine.
+Windows and macOS build 98 fix AI connectivity with system HTTP proxy, manual HTTP/mixed proxy and direct modes shared by connection testing and popup AI. They improve model parameter compatibility and explain output/reasoning length limits. PAC, WPAD, SOCKS-only and authenticated proxies are not supported; use an unauthenticated local HTTP/mixed port instead. Windows build 98 also validates API keys before saving or sending them and explains pasted labels, spaces or line breaks; paste only the key itself. macOS retains its previously accepted build 98 packages without rebuilding.
 
 ## Quick start
 

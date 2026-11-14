@@ -8,11 +8,11 @@
 
 LumaLex 是由 Flutter 与 Rust 构建的桌面 MDX/MDD 词典阅读器。本仓库统一维护 Windows 与 macOS，共享界面、学习数据逻辑和 Rust 词典引擎。
 
-[Gitee 镜像与国内下载](https://gitee.com/memetics/lumalex-desktop/releases)：Windows build 96、macOS build 98，安装包与 GitHub 原件一致，并附 SHA-256 校验文件。
+[Gitee 镜像与国内下载](https://gitee.com/memetics/lumalex-desktop/releases)：Windows 与 macOS 均为 build 98，安装包与 GitHub 原件一致，并附 SHA-256 校验文件。
 
 | 平台 | 下载与状态 |
 | --- | --- |
-| Windows 10 / 11 x64 | [Windows 便携版 build 96](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build98)，完整解压后运行 |
+| Windows 10 / 11 x64 | [Windows 便携版 build 98](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build98)，完整解压后运行 |
 | macOS 12 及以上 | [macOS 版 build 98](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build98)，提供 DMG 与 ZIP |
 
 macOS 包为 Universal（Apple Silicon / Intel）；目前已在 Apple Silicon 上验证，Intel 尚未实机测试。预览版采用临时签名，尚未使用 Developer ID 签名或经过 Apple 公证，首次打开可能需要在系统设置中确认。两端共用设置、词典导航和浮窗内容；macOS 支持菜单栏驻留、全局快捷键、辅助功能选词与语境、Keychain 和 AI 语境释义。实际取词能力取决于来源应用提供的文本接口。本文截图来自 Windows 版本。
@@ -77,9 +77,9 @@ Word 文档示例：AI 将 human touch 解释为“人情味、人性化的接�
 - 支持搜索历史、收藏、复习记录与学习数据导出/恢复。
 - 可选择关闭主窗口时直接退出，或隐藏到 Windows 系统托盘 / macOS 菜单栏继续运行。
 
-Windows build 96 与 macOS build 98 的安装包位于 [统一 Release 页面](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build98)，在 Assets 中按文件名选择平台。桌面 build 96 增加总预算为 64 MiB 的多块索引缓存，主窗口与取词浮窗共用缓存，并沿用现有索引格式。macOS 支持选区右键“复制／查词”和双击正文单词直接查词。两端浮窗均先查原词，再提供相关词形，主动切换后标题、收藏和返回主窗口随当前词形更新。
+Windows 与 macOS build 98 的安装包位于 [统一 Release 页面](https://github.com/memetics1980/lumalex-desktop/releases/tag/v0.1.0-build98)，在 Assets 中按文件名选择平台。桌面 build 96 增加总预算为 64 MiB 的多块索引缓存，主窗口与取词浮窗共用缓存，并沿用现有索引格式。macOS 支持选区右键“复制／查词”和双击正文单词直接查词。两端浮窗均先查原词，再提供相关词形，主动切换后标题、收藏和返回主窗口随当前词形更新。
 
-macOS build 98 修复 AI 连接：可跟随系统 HTTP 代理、手动填写 HTTP／混合端口或直连；测试连接与浮窗 AI 共用设置。改进不同模型的参数兼容性，并对输出或推理长度耗尽给出明确提示。PAC、WPAD、仅 SOCKS 及需认证的代理暂不支持，可改用代理软件的本机 HTTP／混合端口。Windows 继续提供原始 build 96 安装包，尚不包含本次代理与参数修复；Windows 新源码未在本机 Windows 构建验证。
+Windows 与 macOS build 98 修复 AI 连接：可跟随系统 HTTP 代理、手动填写 HTTP／混合端口或直连；测试连接与浮窗 AI 共用设置。改进不同模型的参数兼容性，并对输出或推理长度耗尽给出明确提示。PAC、WPAD、仅 SOCKS 及需认证的代理暂不支持，可改用代理软件的本机 HTTP／混合端口。Windows build 98 还会在保存或发送前检查 API Key，明确提示混入说明、空格或换行的问题；仅粘贴密钥本身即可。macOS 继续使用此前已验收的 build 98 原包，此次未重新构建。
 
 ## 快速开始
 

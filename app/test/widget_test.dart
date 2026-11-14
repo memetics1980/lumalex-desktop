@@ -152,6 +152,55 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final stored in [false, true]) {
+    testWidgets(
+        'AI rejects malformed ${stored ? 'stored' : 'typed'} credentials',
+        (tester) async {
+      var credentialWrites = 0;
+      for (final platform in ['windows', 'macos']) {
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          MethodChannel('local_dictionary/${platform}_screen_lookup'),
+          (call) async {
+            if (call.method == 'hasAccessibilityPermission') return true;
+            if (call.method == 'loadAiApiKey') {
+              return stored ? 'OpenAI api\r\rsk-test-secret' : '';
+            }
+            if (call.method == 'saveAiApiKey') credentialWrites++;
+            return null;
+          },
+        );
+      }
+      tester.view.physicalSize = const Size(1000, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(DictionaryApp(
+        windowsAppSettings:
+            InMemoryWindowsAppSettingsStore(screenLookupAiModel: 'test-model'),
+      ));
+      await tester.pumpAndSettle();
+      await tester
+          .tap(find.byKey(const ValueKey('settings-navigation-button')));
+      await tester.pumpAndSettle();
+      if (!stored) {
+        await tester.enterText(
+            find.byKey(const ValueKey('windows-screen-lookup-ai-api-key')),
+            'OpenAI api\r\rsk-test-secret');
+      }
+      final action = stored
+          ? find.text('测试连接')
+          : find.byKey(const ValueKey('windows-screen-lookup-ai-save'));
+      await tester.ensureVisible(action);
+      await tester.pumpAndSettle();
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('请只粘贴密钥本身'), findsOneWidget);
+      expect(find.text('连接测试失败。'), findsNothing);
+      expect(credentialWrites, 0);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('macOS exposes desktop settings and dictionary groups',
       (tester) async {
     tester.view.physicalSize = const Size(1280, 800);
